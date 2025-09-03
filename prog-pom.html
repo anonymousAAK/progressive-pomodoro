@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progressive Pomodoro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: AMOLED Night -->
+    <!-- Application Structure Plan: A tab-based single-page application with three main views: Timer, History, and Settings. This structure was chosen to separate the primary task (timing), retrospective analysis (history), and configuration (settings) into distinct, non-cluttered workspaces. The user flow is centered on the timer, with focus ratings directly influencing the next work cycle, promoting a seamless progression designed to build focus. This is more intuitive than a single long page, as it mimics a dedicated application experience. -->
+    <!-- Visualization & Content Choices: Report Info: Timer Display -> Goal: Inform -> Viz: Large digital text & Canvas circular progress bar -> Interaction: Real-time countdown -> Justification: Provides clear, at-a-glance feedback on time remaining. Report Info: Focus Rating -> Goal: Organize/Input -> Presentation: 4 colored buttons -> Interaction: Click to select -> Justification: Fast, intuitive way for users to provide feedback that drives the core logic. Report Info: Session History -> Goal: Compare/Organize -> Presentation: Dynamic HTML list -> Interaction: Scroll -> Justification: Simple, clear log for reviewing past performance. Report Info: Gemini Focus Tip -> Goal: Inform/Assist -> Presentation: Text block -> Interaction: Button click to generate -> Justification: Provides actionable, AI-driven advice to improve user focus directly within the app's workflow. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .nav-btn.active {
+            background-color: #4A5568; /* A slightly lighter gray for active state */
+            color: #F7FAFC;
+        }
+        .focus-btn-distracted { background-color: #9B2C2C; color: white; }
+        .focus-btn-okay { background-color: #B83280; color: white; }
+        .focus-btn-focused { background-color: #2C7A7B; color: white; }
+        .focus-btn-flow { background-color: #2B6CB0; color: white; }
+        .focus-btn:hover { opacity: 0.9; }
+        .progress-ring-bg { stroke: #2D3748; }
+        .progress-ring-fg {
+            stroke: #A0AEC0;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            transition: stroke-dashoffset 0.5s;
+        }
+        .loader {
+            border: 2px solid #4A5568;
+            border-top: 2px solid #A0AEC0;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-black text-gray-200 font-sans">
+
+    <div id="app" class="container mx-auto max-w-lg p-4 min-h-screen flex flex-col">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-100">Progressive Pomodoro</h1>
+            <p class="text-gray-400">Cultivate your flow state by adapting to your focus.</p>
+        </header>
+
+        <nav class="flex justify-center bg-gray-900 rounded-lg p-1 mb-6">
+            <button data-target="timer-page" class="nav-btn flex-1 py-2 px-4 rounded-md text-sm font-semibold text-gray-300 transition-colors duration-300 active">Timer</button>
+            <button data-target="history-page" class="nav-btn flex-1 py-2 px-4 rounded-md text-sm font-semibold text-gray-300 transition-colors duration-300">History</button>
+            <button data-target="settings-page" class="nav-btn flex-1 py-2 px-4 rounded-md text-sm font-semibold text-gray-300 transition-colors duration-300">Settings</button>
+        </nav>
+
+        <main class="flex-grow">
+            <!-- Timer Page -->
+            <div id="timer-page" class="page text-center">
+                <div class="relative w-64 h-64 mx-auto mb-4">
+                    <canvas id="progressCanvas" class="absolute top-0 left-0" width="256" height="256"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <p id="timer-status" class="text-xl font-semibold text-gray-400 mb-2">Work</p>
+                        <h2 id="time-display" class="text-6xl font-mono font-bold text-gray-100">05:00</h2>
+                    </div>
+                </div>
+
+                <div id="timer-controls" class="space-x-4 mb-6">
+                    <button id="start-pause-btn" class="bg-gray-700 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-gray-600 transition-colors duration-300">Start</button>
+                    <button id="stop-btn" class="bg-gray-800 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-gray-700 transition-colors duration-300">Stop</button>
+                </div>
+                
+                <div id="skip-break-controls" class="hidden mb-6">
+                     <button id="skip-break-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-blue-500 transition-colors duration-300">Skip Break</button>
+                </div>
+
+                <div id="focus-rating" class="hidden">
+                    <p class="mb-4 font-semibold">How was your focus?</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <button data-rating="distracted" class="focus-btn focus-btn-distracted py-3 rounded-lg font-semibold shadow-md transition-opacity duration-300">Distracted</button>
+                        <button data-rating="okay" class="focus-btn focus-btn-okay py-3 rounded-lg font-semibold shadow-md transition-opacity duration-300">Okay</button>
+                        <button data-rating="focused" class="focus-btn focus-btn-focused py-3 rounded-lg font-semibold shadow-md transition-opacity duration-300">Focused</button>
+                        <button data-rating="flow" class="focus-btn focus-btn-flow py-3 rounded-lg font-semibold shadow-md transition-opacity duration-300">Flow</button>
+                    </div>
+                </div>
+
+                <div id="gemini-actions" class="mt-4 p-4 bg-gray-900 rounded-lg hidden">
+                    <p class="text-gray-400 mb-3">Need a boost? Get a personalized focus tip.</p>
+                    <button id="get-tip-btn" class="bg-purple-600 text-white font-bold py-2 px-5 rounded-lg shadow-md hover:bg-purple-500 transition-colors duration-300 flex items-center justify-center mx-auto">
+                        <span id="tip-btn-text">Get Focus Tip</span>
+                        <div id="tip-loader" class="loader ml-2 hidden"></div>
+                    </button>
+                    <div id="tip-display" class="mt-4 text-purple-300 italic"></div>
+                </div>
+            </div>
+
+            <!-- History Page -->
+            <div id="history-page" class="page hidden">
+                 <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">Session History</h2>
+                    <button id="clear-history-btn" class="text-sm bg-red-600 text-white py-1 px-3 rounded-md hover:bg-red-500 transition-colors duration-300">Clear</button>
+                </div>
+                <div id="history-log" class="bg-gray-900 rounded-lg shadow-inner p-4 max-h-96 overflow-y-auto space-y-3">
+                    <p class="text-gray-500 text-center">No sessions recorded yet.</p>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settings-page" class="page hidden">
+                <h2 class="text-2xl font-bold mb-6 text-center">Settings</h2>
+                <div class="bg-gray-900 rounded-lg shadow p-6 space-y-6">
+                    <div>
+                        <label for="initial-work" class="block text-sm font-medium text-gray-300 mb-1">Initial Work Interval (minutes)</label>
+                        <input type="number" id="initial-work" class="w-full p-2 bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm" min="1" value="5">
+                    </div>
+                    <div>
+                        <label for="interval-adjust" class="block text-sm font-medium text-gray-300 mb-1">Interval Adjustment (minutes)</label>
+                        <input type="number" id="interval-adjust" class="w-full p-2 bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm" min="1" value="2">
+                    </div>
+                     <div>
+                        <label for="break-duration" class="block text-sm font-medium text-gray-300 mb-1">Break Duration (minutes)</label>
+                        <input type="number" id="break-duration" class="w-full p-2 bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm" min="1" value="5">
+                    </div>
+                </div>
+                <div class="mt-6 text-center">
+                    <button id="save-settings-btn" class="bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-green-600 transition-colors duration-300">Save Settings</button>
+                </div>
+                 <div id="settings-saved-msg" class="text-green-500 text-center mt-4 opacity-0 transition-opacity duration-500">Settings saved!</div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const timeDisplay = document.getElementById('time-display');
+            const timerStatus = document.getElementById('timer-status');
+            const startPauseBtn = document.getElementById('start-pause-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const skipBreakBtn = document.getElementById('skip-break-btn');
+            const timerControls = document.getElementById('timer-controls');
+            const skipBreakControls = document.getElementById('skip-break-controls');
+            const focusRatingContainer = document.getElementById('focus-rating');
+            const historyLog = document.getElementById('history-log');
+            const clearHistoryBtn = document.getElementById('clear-history-btn');
+            const saveSettingsBtn = document.getElementById('save-settings-btn');
+            const settingsSavedMsg = document.getElementById('settings-saved-msg');
+            const navBtns = document.querySelectorAll('.nav-btn');
+            const pages = document.querySelectorAll('.page');
+            const geminiActions = document.getElementById('gemini-actions');
+            const getTipBtn = document.getElementById('get-tip-btn');
+            const tipDisplay = document.getElementById('tip-display');
+            const tipBtnText = document.getElementById('tip-btn-text');
+            const tipLoader = document.getElementById('tip-loader');
+            
+            const canvas = document.getElementById('progressCanvas');
+            const ctx = canvas.getContext('2d');
+            const canvasSize = 256;
+            const radius = 110;
+            const center = canvasSize / 2;
+            const lineWidth = 20;
+
+            let timerInterval = null;
+            let totalSeconds = 0;
+            let secondsLeft = 0;
+            let currentMode = 'work';
+            let lastFocusRating = '';
+            let workDuration = 5 * 60;
+            let intervalAdjust = 2 * 60;
+            let breakDuration = 5 * 60;
+            let sessionHistory = [];
+
+            function loadSettings() {
+                workDuration = parseInt(localStorage.getItem('progPomoWork') || '5', 10) * 60;
+                intervalAdjust = parseInt(localStorage.getItem('progPomoAdjust') || '2', 10) * 60;
+                breakDuration = parseInt(localStorage.getItem('progPomoBreak') || '5', 10) * 60;
+
+                document.getElementById('initial-work').value = workDuration / 60;
+                document.getElementById('interval-adjust').value = intervalAdjust / 60;
+                document.getElementById('break-duration').value = breakDuration / 60;
+                
+                resetTimer();
+            }
+
+            function saveSettings() {
+                const initialWorkVal = document.getElementById('initial-work').value;
+                const intervalAdjustVal = document.getElementById('interval-adjust').value;
+                const breakDurationVal = document.getElementById('break-duration').value;
+
+                localStorage.setItem('progPomoWork', initialWorkVal);
+                localStorage.setItem('progPomoAdjust', intervalAdjustVal);
+                localStorage.setItem('progPomoBreak', breakDurationVal);
+
+                loadSettings();
+
+                settingsSavedMsg.classList.remove('opacity-0');
+                setTimeout(() => {
+                    settingsSavedMsg.classList.add('opacity-0');
+                }, 2000);
+            }
+
+            function loadHistory() {
+                sessionHistory = JSON.parse(localStorage.getItem('progPomoHistory') || '[]');
+                renderHistory();
+            }
+
+            function saveHistory() {
+                localStorage.setItem('progPomoHistory', JSON.stringify(sessionHistory));
+            }
+
+            function renderHistory() {
+                if (sessionHistory.length === 0) {
+                    historyLog.innerHTML = `<p class="text-gray-500 text-center">No sessions recorded yet.</p>`;
+                    return;
+                }
+                historyLog.innerHTML = sessionHistory.map(entry => {
+                    const rating = entry.rating.toLowerCase();
+                    let ratingClass = '';
+                    if (rating === 'distracted') ratingClass = 'focus-btn-distracted';
+                    else if (rating === 'okay') ratingClass = 'focus-btn-okay';
+                    else if (rating === 'focused') ratingClass = 'focus-btn-focused';
+                    else if (rating === 'flow') ratingClass = 'focus-btn-flow';
+
+                    return `
+                    <div class="bg-gray-800 p-3 rounded-md flex justify-between items-center text-sm">
+                        <div>
+                            <p class="font-bold">${entry.mode.charAt(0).toUpperCase() + entry.mode.slice(1)} - <span class="font-normal">${entry.duration} min</span></p>
+                            <p class="text-gray-500 text-xs">${entry.timestamp}</p>
+                        </div>
+                        <span class="font-semibold px-2 py-1 rounded-full text-xs text-white ${ratingClass}">${entry.rating}</span>
+                    </div>
+                `}).join('');
+            }
+
+            function clearHistory() {
+                sessionHistory = [];
+                saveHistory();
+                renderHistory();
+            }
+
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+
+            function drawProgress(percent) {
+                ctx.clearRect(0, 0, canvasSize, canvasSize);
+
+                ctx.beginPath();
+                ctx.arc(center, center, radius, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#2D3748'; // progress-ring-bg
+                ctx.lineWidth = lineWidth;
+                ctx.stroke();
+
+                if (percent > 0) {
+                    ctx.beginPath();
+                    ctx.arc(center, center, radius, -Math.PI / 2, (-Math.PI / 2) + (percent * 2 * Math.PI), false);
+                    ctx.strokeStyle = currentMode === 'work' ? '#A0AEC0' : '#63B3ED'; // progress-ring-fg
+                    ctx.lineWidth = lineWidth;
+                    ctx.stroke();
+                }
+            }
+
+            function updateDisplay() {
+                timeDisplay.textContent = formatTime(secondsLeft);
+                const percent = totalSeconds > 0 ? (totalSeconds - secondsLeft) / totalSeconds : 0;
+                drawProgress(percent);
+            }
+
+            function switchMode(mode) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                currentMode = mode;
+                geminiActions.classList.add('hidden');
+                tipDisplay.innerHTML = '';
+                
+                if (mode === 'work') {
+                    totalSeconds = workDuration;
+                    timerStatus.textContent = 'Work';
+                    skipBreakControls.classList.add('hidden');
+                } else {
+                    totalSeconds = breakDuration;
+                    timerStatus.textContent = 'Break';
+                    skipBreakControls.classList.remove('hidden');
+                    if (lastFocusRating === 'distracted' || lastFocusRating === 'okay') {
+                        geminiActions.classList.remove('hidden');
+                    }
+                }
+
+                secondsLeft = totalSeconds;
+                updateDisplay();
+                startPauseBtn.textContent = 'Start';
+            }
+
+            function startTimer() {
+                if (timerInterval) return;
+                startPauseBtn.textContent = 'Pause';
+                if(secondsLeft <= 0) secondsLeft = totalSeconds;
+
+                timerInterval = setInterval(() => {
+                    secondsLeft--;
+                    updateDisplay();
+                    if (secondsLeft <= 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        if (currentMode === 'work') {
+                            timerControls.classList.add('hidden');
+                            focusRatingContainer.classList.remove('hidden');
+                        } else {
+                            switchMode('work');
+                            startTimer();
+                        }
+                    }
+                }, 1000);
+            }
+
+            function pauseTimer() {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                startPauseBtn.textContent = 'Resume';
+            }
+
+            function resetTimer() {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                currentMode = 'work';
+                totalSeconds = workDuration;
+                secondsLeft = totalSeconds;
+                startPauseBtn.textContent = 'Start';
+                timerStatus.textContent = 'Work';
+                timerControls.classList.remove('hidden');
+                skipBreakControls.classList.add('hidden');
+                focusRatingContainer.classList.add('hidden');
+                geminiActions.classList.add('hidden');
+                updateDisplay();
+            }
+            
+            function handleRating(rating) {
+                lastFocusRating = rating;
+                const completedDuration = (totalSeconds / 60).toFixed(1);
+                sessionHistory.unshift({
+                    mode: 'Work',
+                    duration: completedDuration,
+                    rating: rating.charAt(0).toUpperCase() + rating.slice(1),
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+                saveHistory();
+                renderHistory();
+
+                focusRatingContainer.classList.add('hidden');
+                timerControls.classList.remove('hidden');
+
+                switch (rating) {
+                    case 'distracted':
+                        workDuration = Math.max(60, workDuration - intervalAdjust);
+                        switchMode('break');
+                        startTimer();
+                        break;
+                    case 'okay':
+                        switchMode('break');
+                        startTimer();
+                        break;
+                    case 'focused':
+                        workDuration += intervalAdjust;
+                        switchMode('work');
+                        startTimer();
+                        break;
+                    case 'flow':
+                        workDuration += (intervalAdjust * 2);
+                        switchMode('work');
+                        startTimer();
+                        break;
+                }
+            }
+            
+            async function getFocusTip() {
+                tipBtnText.classList.add('hidden');
+                tipLoader.classList.remove('hidden');
+                getTipBtn.disabled = true;
+                tipDisplay.textContent = '';
+
+                const userQuery = `I'm using a pomodoro timer and just rated my focus as '${lastFocusRating}'. Give me one short, actionable tip, in less than 25 words, to improve my focus for the next work session.`;
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: userQuery }] }] })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (text) {
+                        tipDisplay.textContent = text.trim();
+                    } else {
+                        tipDisplay.textContent = "Sorry, couldn't get a tip right now. Try clearing your desk!";
+                    }
+                } catch (error) {
+                    console.error("Gemini API call failed:", error);
+                    tipDisplay.textContent = "Error fetching tip. Check your connection.";
+                } finally {
+                    tipBtnText.classList.remove('hidden');
+                    tipLoader.classList.add('hidden');
+                    getTipBtn.disabled = false;
+                }
+            }
+
+            function handleSkipBreak() {
+                switchMode('work');
+                startTimer();
+            }
+
+            navBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetId = btn.dataset.target;
+
+                    navBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    pages.forEach(page => {
+                        if (page.id === targetId) {
+                            page.classList.remove('hidden');
+                        } else {
+                            page.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            startPauseBtn.addEventListener('click', () => {
+                if (timerInterval) {
+                    pauseTimer();
+                } else {
+                    startTimer();
+                }
+            });
+
+            stopBtn.addEventListener('click', resetTimer);
+            skipBreakBtn.addEventListener('click', handleSkipBreak);
+            saveSettingsBtn.addEventListener('click', saveSettings);
+            clearHistoryBtn.addEventListener('click', clearHistory);
+            getTipBtn.addEventListener('click', getFocusTip);
+            
+            focusRatingContainer.addEventListener('click', (e) => {
+                if(e.target.matches('[data-rating]')) {
+                    handleRating(e.target.dataset.rating);
+                }
+            });
+
+            loadSettings();
+            loadHistory();
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>
+
