@@ -7,6 +7,7 @@
     <meta name="description" content="A beautiful adaptive pomodoro timer that grows with your focus. Track sessions, build streaks, and cultivate deep work.">
     <meta name="theme-color" content="#0a0a0f">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>">
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Progressive%20Pomodoro%22%2C%22short_name%22%3A%22Pomodoro%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230a0a0f%22%2C%22theme_color%22%3A%22%230a0a0f%22%2C%22description%22%3A%22Adaptive%20pomodoro%20timer%22%7D">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
@@ -41,7 +42,7 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -841,6 +842,64 @@
             100% { opacity: 0; transform: translateY(100vh) rotate(720deg) scale(0.3); }
         }
 
+        /* Stats range buttons */
+        .stats-range-btn {
+            padding: 5px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            border-radius: 20px;
+        }
+        .stats-range-btn:hover { color: var(--text-primary); border-color: var(--border-hover); }
+        .stats-range-btn.active-range {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.3);
+            color: var(--accent-work);
+        }
+
+        /* Confirm modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            max-width: 340px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-box p { font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .modal-actions .btn { padding: 10px 24px; border-radius: var(--radius-sm); font-size: 0.85rem; }
+        .btn-cancel { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); }
+        .btn-confirm { background: var(--accent-danger); color: white; }
+
+        /* Trend indicator */
+        .trend-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 4px;
+        }
+        .trend-badge.up { background: rgba(16,185,129,0.15); color: var(--accent-success); }
+        .trend-badge.down { background: rgba(239,68,68,0.15); color: var(--accent-danger); }
+        .trend-badge.flat { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+
         /* Hidden class */
         .hidden { display: none !important; }
 
@@ -998,7 +1057,14 @@
 
             <!-- Stats Page -->
             <div id="stats-page" class="page">
-                <h2 style="font-size:1.3rem;font-weight:700;margin-bottom:16px;">Statistics</h2>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h2 style="font-size:1.3rem;font-weight:700;">Statistics</h2>
+                    <div class="stats-range-btns" style="display:flex;gap:4px;">
+                        <button data-range="week" class="btn stats-range-btn active-range">Week</button>
+                        <button data-range="month" class="btn stats-range-btn">Month</button>
+                        <button data-range="all" class="btn stats-range-btn">All</button>
+                    </div>
+                </div>
                 <div class="stats-grid">
                     <div class="stats-card">
                         <div class="s-value" id="total-focus-time" style="color:var(--accent-work);">0h</div>
@@ -1063,6 +1129,13 @@
                             </div>
                             <input type="number" id="long-break-duration" class="setting-input" min="1" max="60" value="15">
                         </div>
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-label">Max Work</div>
+                                <div class="setting-desc">Cap for adaptive duration (min)</div>
+                            </div>
+                            <input type="number" id="max-work-duration" class="setting-input" min="5" max="120" value="60">
+                        </div>
                     </div>
 
                     <div class="card">
@@ -1107,6 +1180,43 @@
                                 <span class="toggle-track"></span>
                             </label>
                         </div>
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-label">Skip Break on Focus</div>
+                                <div class="setting-desc">Skip break after Focused/Flow rating</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="skip-break-on-focus" checked>
+                                <span class="toggle-track"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Data</div>
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-label">Backup Data</div>
+                                <div class="setting-desc">Export all data as JSON</div>
+                            </div>
+                            <button class="btn btn-export" id="json-export-btn" style="padding:8px 14px;">Export JSON</button>
+                        </div>
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-label">Restore Data</div>
+                                <div class="setting-desc">Import from JSON backup</div>
+                            </div>
+                            <label class="btn btn-export" style="padding:8px 14px;cursor:pointer;">
+                                Import JSON
+                                <input type="file" id="json-import-input" accept=".json" style="display:none;">
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-label">Storage Used</div>
+                                <div class="setting-desc" id="storage-used">Calculating...</div>
+                            </div>
+                        </div>
                     </div>
 
                     <button class="btn btn-save" id="save-settings-btn">Save Settings</button>
@@ -1118,7 +1228,6 @@
     <div class="save-toast" id="save-toast">Settings saved!</div>
     <div class="celebration" id="celebration"></div>
 
-    <!-- Audio context for sound generation -->
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- DOM Elements ---
@@ -1147,101 +1256,135 @@
         const getTipBtn = document.getElementById('get-tip-btn');
         const tipDisplay = document.getElementById('tip-display');
         const celebration = document.getElementById('celebration');
+        const jsonExportBtn = document.getElementById('json-export-btn');
+        const jsonImportInput = document.getElementById('json-import-input');
+        const storageUsedEl = document.getElementById('storage-used');
 
         // --- Constants ---
-        const RING_CIRCUMFERENCE = 2 * Math.PI * 116; // ~729.12
+        const RING_CIRCUMFERENCE = 2 * Math.PI * 116;
         const POMODOROS_BEFORE_LONG_BREAK = 4;
+        const MAX_HISTORY_ENTRIES = 500;
+        const HISTORY_PRUNE_AGE_DAYS = 90;
 
         // --- State ---
         let timerInterval = null;
         let totalSeconds = 0;
         let secondsLeft = 0;
-        let currentMode = 'work'; // 'work' | 'break' | 'longbreak'
+        let currentMode = 'work';
         let lastFocusRating = '';
+        let initialWorkDuration = 5 * 60;
         let workDuration = 5 * 60;
+        let maxWorkDuration = 60 * 60;
         let intervalAdjust = 2 * 60;
         let breakDuration = 5 * 60;
         let longBreakDuration = 15 * 60;
         let sessionHistory = [];
-        let completedPomodoros = 0; // in current cycle
-        let totalCompletedToday = 0;
+        let completedPomodoros = 0;
         let currentTask = '';
         let soundEnabled = true;
         let notifEnabled = false;
         let autoBreak = true;
         let autoWork = false;
+        let skipBreakOnFocus = true;
         let streakData = { current: 0, best: 0, lastDate: null };
+        let statsRange = 'week';
 
-        // --- Sound Generation ---
+        // --- Consistent local date string (fix #5: timezone) ---
+        function localDateStr(date) {
+            const d = date || new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        // --- Sound Generation (fix #8: graceful AudioContext handling) ---
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         let audioCtx = null;
 
         function ensureAudioCtx() {
-            if (!audioCtx) audioCtx = new AudioCtx();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            try {
+                if (!audioCtx && AudioCtx) audioCtx = new AudioCtx();
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                return !!audioCtx;
+            } catch (e) {
+                console.warn('AudioContext unavailable:', e.message);
+                return false;
+            }
         }
 
         function playSound(type) {
             if (!soundEnabled) return;
-            ensureAudioCtx();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            if (!ensureAudioCtx()) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
 
-            if (type === 'work-end') {
-                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.15); // E5
-                osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.3); // G5
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
-                osc.start(audioCtx.currentTime);
-                osc.stop(audioCtx.currentTime + 0.6);
-            } else if (type === 'break-end') {
-                osc.frequency.setValueAtTime(783.99, audioCtx.currentTime);
-                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12);
-                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime + 0.24);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-                osc.start(audioCtx.currentTime);
-                osc.stop(audioCtx.currentTime + 0.5);
-            } else if (type === 'click') {
-                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-                osc.start(audioCtx.currentTime);
-                osc.stop(audioCtx.currentTime + 0.05);
+                if (type === 'work-end') {
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.15);
+                    osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+                    osc.start(audioCtx.currentTime);
+                    osc.stop(audioCtx.currentTime + 0.6);
+                } else if (type === 'break-end') {
+                    osc.frequency.setValueAtTime(783.99, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12);
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime + 0.24);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    osc.start(audioCtx.currentTime);
+                    osc.stop(audioCtx.currentTime + 0.5);
+                } else if (type === 'click') {
+                    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                    osc.start(audioCtx.currentTime);
+                    osc.stop(audioCtx.currentTime + 0.05);
+                }
+            } catch (e) {
+                console.warn('Sound playback failed:', e.message);
             }
         }
 
         // --- Notification ---
         function sendNotification(title, body) {
             if (!notifEnabled) return;
-            if (Notification.permission === 'granted') {
-                new Notification(title, { body, icon: '🍅' });
-            }
+            try {
+                if (Notification.permission === 'granted') {
+                    new Notification(title, { body });
+                }
+            } catch (e) { /* notifications unsupported */ }
         }
 
-        // --- Persistence ---
+        // --- Persistence (fix #1: persist adapted workDuration) ---
         function loadSettings() {
-            workDuration = parseInt(localStorage.getItem('pp_work') || '5', 10) * 60;
+            initialWorkDuration = parseInt(localStorage.getItem('pp_work') || '5', 10) * 60;
             intervalAdjust = parseInt(localStorage.getItem('pp_adjust') || '2', 10) * 60;
             breakDuration = parseInt(localStorage.getItem('pp_break') || '5', 10) * 60;
             longBreakDuration = parseInt(localStorage.getItem('pp_longBreak') || '15', 10) * 60;
+            maxWorkDuration = parseInt(localStorage.getItem('pp_maxWork') || '60', 10) * 60;
             soundEnabled = localStorage.getItem('pp_sound') !== 'false';
             notifEnabled = localStorage.getItem('pp_notif') === 'true';
             autoBreak = localStorage.getItem('pp_autoBreak') !== 'false';
             autoWork = localStorage.getItem('pp_autoWork') === 'true';
+            skipBreakOnFocus = localStorage.getItem('pp_skipBreakOnFocus') !== 'false';
             streakData = JSON.parse(localStorage.getItem('pp_streak') || '{"current":0,"best":0,"lastDate":null}');
 
-            document.getElementById('initial-work').value = workDuration / 60;
+            // Restore adapted work duration (fix #1)
+            const savedAdaptedWork = localStorage.getItem('pp_adaptedWork');
+            workDuration = savedAdaptedWork ? parseInt(savedAdaptedWork, 10) : initialWorkDuration;
+
+            document.getElementById('initial-work').value = initialWorkDuration / 60;
             document.getElementById('interval-adjust').value = intervalAdjust / 60;
             document.getElementById('break-duration').value = breakDuration / 60;
             document.getElementById('long-break-duration').value = longBreakDuration / 60;
+            document.getElementById('max-work-duration').value = maxWorkDuration / 60;
             document.getElementById('sound-enabled').checked = soundEnabled;
             document.getElementById('notif-enabled').checked = notifEnabled;
             document.getElementById('auto-break').checked = autoBreak;
             document.getElementById('auto-work').checked = autoWork;
+            document.getElementById('skip-break-on-focus').checked = skipBreakOnFocus;
         }
 
         function saveSettings() {
@@ -1250,24 +1393,35 @@
                 pp_adjust: document.getElementById('interval-adjust').value,
                 pp_break: document.getElementById('break-duration').value,
                 pp_longBreak: document.getElementById('long-break-duration').value,
+                pp_maxWork: document.getElementById('max-work-duration').value,
                 pp_sound: document.getElementById('sound-enabled').checked,
                 pp_notif: document.getElementById('notif-enabled').checked,
                 pp_autoBreak: document.getElementById('auto-break').checked,
                 pp_autoWork: document.getElementById('auto-work').checked,
+                pp_skipBreakOnFocus: document.getElementById('skip-break-on-focus').checked,
             };
             Object.entries(vals).forEach(([k, v]) => localStorage.setItem(k, v));
 
-            if (vals.pp_notif === true && Notification.permission === 'default') {
+            // Reset adapted duration when initial work changes
+            localStorage.removeItem('pp_adaptedWork');
+
+            if (vals.pp_notif === true && typeof Notification !== 'undefined' && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
 
             loadSettings();
-            resetTimer();
+            resetTimer(true);
             showToast('Settings saved!');
+            updateStorageUsed();
+        }
+
+        function persistAdaptedWork() {
+            localStorage.setItem('pp_adaptedWork', workDuration);
         }
 
         function loadHistory() {
             sessionHistory = JSON.parse(localStorage.getItem('pp_history') || '[]');
+            pruneHistory();
         }
 
         function saveHistory() {
@@ -1278,14 +1432,58 @@
             localStorage.setItem('pp_streak', JSON.stringify(streakData));
         }
 
+        // --- Fix #7: Auto-prune old history entries ---
+        function pruneHistory() {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - HISTORY_PRUNE_AGE_DAYS);
+            const cutoffStr = localDateStr(cutoffDate);
+
+            const beforeLen = sessionHistory.length;
+            sessionHistory = sessionHistory.filter(s => {
+                const entryDate = s.localDate || s.date || '';
+                return entryDate >= cutoffStr || entryDate === '';
+            });
+
+            if (sessionHistory.length > MAX_HISTORY_ENTRIES) {
+                sessionHistory = sessionHistory.slice(0, MAX_HISTORY_ENTRIES);
+            }
+
+            if (sessionHistory.length !== beforeLen) {
+                saveHistory();
+                console.log(`Pruned ${beforeLen - sessionHistory.length} old history entries`);
+            }
+        }
+
+        // --- Storage usage (fix #7) ---
+        function updateStorageUsed() {
+            try {
+                let total = 0;
+                for (let key in localStorage) {
+                    if (key.startsWith('pp_')) {
+                        total += localStorage.getItem(key).length * 2; // chars * 2 bytes
+                    }
+                }
+                const kb = (total / 1024).toFixed(1);
+                const pct = ((total / (5 * 1024 * 1024)) * 100).toFixed(1);
+                storageUsedEl.textContent = `${kb} KB (~${pct}% of limit)`;
+                if (parseFloat(pct) > 80) {
+                    storageUsedEl.style.color = 'var(--accent-danger)';
+                }
+            } catch (e) {
+                storageUsedEl.textContent = 'Unable to calculate';
+            }
+        }
+
         // --- Streak logic ---
         function updateStreak() {
-            const today = new Date().toDateString();
+            const today = localDateStr();
             if (streakData.lastDate === today) return;
 
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
-            if (streakData.lastDate === yesterday.toDateString()) {
+            const yesterdayStr = localDateStr(yesterday);
+
+            if (streakData.lastDate === yesterdayStr) {
                 streakData.current++;
             } else if (streakData.lastDate !== today) {
                 streakData.current = 1;
@@ -1330,7 +1528,6 @@
             const percent = totalSeconds > 0 ? (totalSeconds - secondsLeft) / totalSeconds : 0;
             updateRing(percent);
 
-            // Update page title
             if (timerInterval) {
                 document.title = `${formatTime(secondsLeft)} - ${currentMode === 'work' ? 'Work' : 'Break'} | Progressive Pomodoro`;
             } else {
@@ -1409,7 +1606,18 @@
             startPauseBtn.textContent = 'Resume';
         }
 
-        function resetTimer() {
+        // --- Fix #4: Confirm before resetting active timer ---
+        function resetTimer(force) {
+            if (!force && timerInterval && secondsLeft < totalSeconds) {
+                showConfirmModal('Reset the current timer? Progress will be lost.', () => {
+                    doReset();
+                });
+                return;
+            }
+            doReset();
+        }
+
+        function doReset() {
             clearInterval(timerInterval);
             timerInterval = null;
             currentMode = 'work';
@@ -1428,6 +1636,31 @@
             document.title = 'Progressive Pomodoro';
         }
 
+        // --- Confirm modal (fix #4) ---
+        function showConfirmModal(message, onConfirm) {
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.innerHTML = `
+                <div class="modal-box">
+                    <p>${escapeHtml(message)}</p>
+                    <div class="modal-actions">
+                        <button class="btn btn-cancel" id="modal-cancel">Cancel</button>
+                        <button class="btn btn-confirm" id="modal-confirm">Confirm</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            overlay.querySelector('#modal-cancel').addEventListener('click', () => overlay.remove());
+            overlay.querySelector('#modal-confirm').addEventListener('click', () => {
+                overlay.remove();
+                onConfirm();
+            });
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.remove();
+            });
+        }
+
         function onTimerComplete() {
             if (currentMode === 'work') {
                 playSound('work-end');
@@ -1443,7 +1676,7 @@
             }
         }
 
-        // --- Focus rating ---
+        // --- Focus rating (fix #2: max cap, fix #3: configurable skip-break) ---
         function handleRating(rating) {
             lastFocusRating = rating;
             const durationMin = parseFloat((totalSeconds / 60).toFixed(1));
@@ -1451,34 +1684,37 @@
             completedPomodoros++;
             updateStreak();
 
+            const now = new Date();
             sessionHistory.unshift({
                 mode: 'Work',
                 task: currentTask || 'Untitled',
                 duration: durationMin,
                 rating: rating.charAt(0).toUpperCase() + rating.slice(1),
-                timestamp: new Date().toISOString(),
-                displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                date: new Date().toDateString()
+                timestamp: now.toISOString(),
+                displayTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                localDate: localDateStr(now), // fix #5: consistent local date
+                date: now.toDateString() // keep for backward compat
             });
             saveHistory();
 
             focusRating.classList.add('hidden');
             timerControls.classList.remove('hidden');
 
+            // Adjust work duration with max cap (fix #2)
             switch (rating) {
                 case 'distracted':
                     workDuration = Math.max(60, workDuration - intervalAdjust);
                     break;
                 case 'okay':
-                    // No change
                     break;
                 case 'focused':
-                    workDuration += intervalAdjust;
+                    workDuration = Math.min(maxWorkDuration, workDuration + intervalAdjust);
                     break;
                 case 'flow':
-                    workDuration += intervalAdjust * 2;
+                    workDuration = Math.min(maxWorkDuration, workDuration + intervalAdjust * 2);
                     break;
             }
+            persistAdaptedWork(); // fix #1: persist adapted duration
 
             // Determine break type
             let nextMode = 'break';
@@ -1487,8 +1723,8 @@
                 completedPomodoros = 0;
             }
 
-            // For focused/flow: skip break, go to work
-            if (rating === 'focused' || rating === 'flow') {
+            // Fix #3: skip break is now a configurable setting
+            if (skipBreakOnFocus && (rating === 'focused' || rating === 'flow')) {
                 switchMode('work');
                 startTimer();
             } else {
@@ -1522,21 +1758,18 @@
 
         // --- Top stats ---
         function updateTopStats() {
-            // Streak
             document.getElementById('streak-value').textContent = streakData.current;
 
-            // Today's minutes
-            const today = new Date().toDateString();
+            const today = localDateStr();
             const todayMinutes = sessionHistory
-                .filter(s => s.date === today)
+                .filter(s => (s.localDate || '') === today)
                 .reduce((sum, s) => sum + s.duration, 0);
             const todayDisplay = todayMinutes >= 60
                 ? `${(todayMinutes / 60).toFixed(1)}h`
                 : `${Math.round(todayMinutes)}m`;
             document.getElementById('today-minutes').textContent = todayDisplay;
 
-            // Session count today
-            const todaySessions = sessionHistory.filter(s => s.date === today).length;
+            const todaySessions = sessionHistory.filter(s => (s.localDate || '') === today).length;
             document.getElementById('session-count').textContent = todaySessions;
         }
 
@@ -1580,9 +1813,9 @@
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(today);
                 d.setDate(d.getDate() - i);
-                const dateStr = d.toDateString();
+                const dateStr = localDateStr(d);
                 const mins = sessionHistory
-                    .filter(s => s.date === dateStr)
+                    .filter(s => (s.localDate || '') === dateStr)
                     .reduce((sum, s) => sum + s.duration, 0);
                 weekData.push({ day: days[d.getDay()], mins: Math.round(mins), isToday: i === 0 });
             }
@@ -1602,31 +1835,64 @@
             }).join('');
         }
 
-        // --- Stats page ---
+        // --- Fix #10: Stats with date range filtering and trends ---
+        function getFilteredSessions(range) {
+            if (range === 'all') return sessionHistory;
+            const now = new Date();
+            const cutoff = new Date();
+            if (range === 'week') cutoff.setDate(now.getDate() - 7);
+            else if (range === 'month') cutoff.setDate(now.getDate() - 30);
+            const cutoffStr = localDateStr(cutoff);
+            return sessionHistory.filter(s => (s.localDate || '') >= cutoffStr);
+        }
+
+        function getPreviousPeriodSessions(range) {
+            if (range === 'all') return [];
+            const now = new Date();
+            const days = range === 'week' ? 7 : 30;
+            const periodStart = new Date();
+            periodStart.setDate(now.getDate() - days * 2);
+            const periodEnd = new Date();
+            periodEnd.setDate(now.getDate() - days);
+            const startStr = localDateStr(periodStart);
+            const endStr = localDateStr(periodEnd);
+            return sessionHistory.filter(s => {
+                const d = s.localDate || '';
+                return d >= startStr && d < endStr;
+            });
+        }
+
         function renderStats() {
+            const filtered = getFilteredSessions(statsRange);
+            const previous = getPreviousPeriodSessions(statsRange);
+
             // Total focus time
-            const totalMins = sessionHistory.reduce((sum, s) => sum + s.duration, 0);
+            const totalMins = filtered.reduce((sum, s) => sum + s.duration, 0);
+            const prevMins = previous.reduce((sum, s) => sum + s.duration, 0);
             const totalHours = totalMins / 60;
-            document.getElementById('total-focus-time').textContent =
-                totalHours >= 1 ? `${totalHours.toFixed(1)}h` : `${Math.round(totalMins)}m`;
+            document.getElementById('total-focus-time').innerHTML =
+                (totalHours >= 1 ? `${totalHours.toFixed(1)}h` : `${Math.round(totalMins)}m`) +
+                renderTrend(totalMins, prevMins);
 
             // Total sessions
-            document.getElementById('total-sessions-stat').textContent = sessionHistory.length;
+            document.getElementById('total-sessions-stat').innerHTML =
+                filtered.length + renderTrend(filtered.length, previous.length);
 
             // Avg duration
-            const avg = sessionHistory.length > 0 ? totalMins / sessionHistory.length : 0;
-            document.getElementById('avg-duration').textContent = `${avg.toFixed(1)}m`;
+            const avg = filtered.length > 0 ? totalMins / filtered.length : 0;
+            const prevAvg = previous.length > 0 ? prevMins / previous.length : 0;
+            document.getElementById('avg-duration').innerHTML =
+                `${avg.toFixed(1)}m` + renderTrend(avg, prevAvg);
 
             // Best streak
             document.getElementById('best-streak').textContent = streakData.best;
 
             // Focus distribution
             const counts = { Distracted: 0, Okay: 0, Focused: 0, Flow: 0 };
-            sessionHistory.forEach(s => { if (counts[s.rating] !== undefined) counts[s.rating]++; });
-            const total = sessionHistory.length || 1;
+            filtered.forEach(s => { if (counts[s.rating] !== undefined) counts[s.rating]++; });
+            const total = filtered.length || 1;
 
-            const distEl = document.getElementById('focus-distribution');
-            distEl.innerHTML = Object.entries(counts).map(([key, val]) => {
+            document.getElementById('focus-distribution').innerHTML = Object.entries(counts).map(([key, val]) => {
                 const pct = (val / total) * 100;
                 return `<div class="focus-dist-bar ${key.toLowerCase()}" style="width:${pct}%"></div>`;
             }).join('');
@@ -1645,7 +1911,7 @@
             `).join('');
 
             // Longest sessions
-            const longest = [...sessionHistory].sort((a, b) => b.duration - a.duration).slice(0, 5);
+            const longest = [...filtered].sort((a, b) => b.duration - a.duration).slice(0, 5);
             document.getElementById('longest-sessions').innerHTML = longest.length === 0
                 ? '<p style="color:var(--text-muted);font-size:0.85rem;">No data yet</p>'
                 : longest.map((s, i) => `
@@ -1660,34 +1926,130 @@
                 `).join('');
         }
 
-        // --- Export ---
+        function renderTrend(current, previous) {
+            if (statsRange === 'all' || previous === 0) return '';
+            const pctChange = ((current - previous) / previous) * 100;
+            if (Math.abs(pctChange) < 1) return ' <span class="trend-badge flat">— same</span>';
+            const arrow = pctChange > 0 ? '↑' : '↓';
+            const cls = pctChange > 0 ? 'up' : 'down';
+            return ` <span class="trend-badge ${cls}">${arrow} ${Math.abs(pctChange).toFixed(0)}%</span>`;
+        }
+
+        // --- CSV Export ---
         function exportHistory() {
             if (sessionHistory.length === 0) return;
             const csv = 'Task,Duration (min),Rating,Date,Time\n' +
                 sessionHistory.map(s =>
-                    `"${(s.task || 'Untitled').replace(/"/g, '""')}",${s.duration},${s.rating},${s.date || ''},${s.displayTime || ''}`
+                    `"${(s.task || 'Untitled').replace(/"/g, '""')}",${s.duration},${s.rating},${s.localDate || s.date || ''},${s.displayTime || ''}`
                 ).join('\n');
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `pomodoro-history-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.download = `pomodoro-history-${localDateStr()}.csv`;
             a.click();
             URL.revokeObjectURL(url);
         }
 
-        // --- Clear history ---
-        function clearHistory() {
-            if (!confirm('Clear all session history? This cannot be undone.')) return;
-            sessionHistory = [];
-            saveHistory();
-            renderHistory();
-            renderWeeklyChart();
-            renderStats();
-            updateTopStats();
+        // --- Fix #9: JSON import/export for full data backup ---
+        function exportJSON() {
+            const data = {
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                history: sessionHistory,
+                streak: streakData,
+                adaptedWork: workDuration,
+                settings: {
+                    initialWork: initialWorkDuration / 60,
+                    adjust: intervalAdjust / 60,
+                    breakDuration: breakDuration / 60,
+                    longBreak: longBreakDuration / 60,
+                    maxWork: maxWorkDuration / 60,
+                    sound: soundEnabled,
+                    notif: notifEnabled,
+                    autoBreak, autoWork, skipBreakOnFocus
+                }
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pomodoro-backup-${localDateStr()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Backup exported!');
         }
 
-        // --- Focus tips (built-in, no API key needed) ---
+        function importJSON(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data.history || !Array.isArray(data.history)) {
+                        showToast('Invalid backup file');
+                        return;
+                    }
+
+                    showConfirmModal(
+                        `Import ${data.history.length} sessions? This will replace your current data.`,
+                        () => {
+                            sessionHistory = data.history;
+                            saveHistory();
+
+                            if (data.streak) {
+                                streakData = data.streak;
+                                saveStreak();
+                            }
+                            if (data.adaptedWork) {
+                                workDuration = data.adaptedWork;
+                                persistAdaptedWork();
+                            }
+                            if (data.settings) {
+                                const s = data.settings;
+                                localStorage.setItem('pp_work', s.initialWork || 5);
+                                localStorage.setItem('pp_adjust', s.adjust || 2);
+                                localStorage.setItem('pp_break', s.breakDuration || 5);
+                                localStorage.setItem('pp_longBreak', s.longBreak || 15);
+                                localStorage.setItem('pp_maxWork', s.maxWork || 60);
+                                localStorage.setItem('pp_sound', s.sound !== false);
+                                localStorage.setItem('pp_notif', s.notif === true);
+                                localStorage.setItem('pp_autoBreak', s.autoBreak !== false);
+                                localStorage.setItem('pp_autoWork', s.autoWork === true);
+                                localStorage.setItem('pp_skipBreakOnFocus', s.skipBreakOnFocus !== false);
+                            }
+
+                            loadSettings();
+                            resetTimer(true);
+                            updateTopStats();
+                            renderHistory();
+                            renderWeeklyChart();
+                            renderStats();
+                            updateStorageUsed();
+                            showToast(`Imported ${data.history.length} sessions!`);
+                        }
+                    );
+                } catch (err) {
+                    showToast('Failed to parse backup file');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- Clear history ---
+        function clearHistory() {
+            showConfirmModal('Clear all session history? This cannot be undone.', () => {
+                sessionHistory = [];
+                saveHistory();
+                renderHistory();
+                renderWeeklyChart();
+                renderStats();
+                updateTopStats();
+                updateStorageUsed();
+                showToast('History cleared');
+            });
+        }
+
+        // --- Focus tips ---
         const focusTips = [
             "Close all unnecessary browser tabs. Each open tab is a potential distraction pulling at your attention.",
             "Try the 'one thing' rule: before starting, write down the single most important task to accomplish.",
@@ -1714,7 +2076,6 @@
         function getFocusTip() {
             getTipBtn.innerHTML = 'Loading<span class="loader-inline"></span>';
             getTipBtn.disabled = true;
-
             setTimeout(() => {
                 const tip = focusTips[Math.floor(Math.random() * focusTips.length)];
                 tipDisplay.textContent = `"${tip}"`;
@@ -1741,9 +2102,19 @@
                 });
                 playSound('click');
 
-                // Refresh data on page switch
                 if (targetId === 'history-page') { renderHistory(); renderWeeklyChart(); }
                 if (targetId === 'stats-page') renderStats();
+                if (targetId === 'settings-page') updateStorageUsed();
+            });
+        });
+
+        // --- Stats range buttons (fix #10) ---
+        document.querySelectorAll('.stats-range-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.stats-range-btn').forEach(b => b.classList.remove('active-range'));
+                btn.classList.add('active-range');
+                statsRange = btn.dataset.range;
+                renderStats();
             });
         });
 
@@ -1751,10 +2122,10 @@
         startPauseBtn.addEventListener('click', () => {
             if (timerInterval) pauseTimer(); else startTimer();
         });
-        stopBtn.addEventListener('click', resetTimer);
+        stopBtn.addEventListener('click', () => resetTimer(false));
         skipBtn.addEventListener('click', () => {
             if (currentMode === 'work') {
-                resetTimer();
+                resetTimer(false);
             } else {
                 switchMode('work');
                 startTimer();
@@ -1768,6 +2139,11 @@
         clearHistoryBtn.addEventListener('click', clearHistory);
         exportBtn.addEventListener('click', exportHistory);
         getTipBtn.addEventListener('click', getFocusTip);
+        jsonExportBtn.addEventListener('click', exportJSON);
+        jsonImportInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) importJSON(e.target.files[0]);
+            e.target.value = '';
+        });
 
         focusRating.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-rating]');
@@ -1779,14 +2155,13 @@
 
         // --- Keyboard shortcuts ---
         document.addEventListener('keydown', (e) => {
-            // Don't capture when typing in input
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
             if (e.code === 'Space') {
                 e.preventDefault();
                 if (timerInterval) pauseTimer(); else startTimer();
             } else if (e.key === 'r' || e.key === 'R') {
-                resetTimer();
+                resetTimer(false);
             } else if (e.key === 's' || e.key === 'S') {
                 if (currentMode !== 'work') {
                     switchMode('work');
@@ -1798,16 +2173,30 @@
         // --- Initialize ---
         loadSettings();
         loadHistory();
-        resetTimer();
+        doReset();
         updateTopStats();
         renderHistory();
         renderWeeklyChart();
         renderStats();
         renderSessionDots();
+        updateStorageUsed();
 
-        // Notification permission
-        if (notifEnabled && Notification.permission === 'default') {
+        if (notifEnabled && typeof Notification !== 'undefined' && Notification.permission === 'default') {
             Notification.requestPermission();
+        }
+
+        // --- PWA: Register service worker if available (fix #6) ---
+        if ('serviceWorker' in navigator) {
+            // Inline service worker via blob for single-file PWA
+            const swCode = `
+                const CACHE_NAME = 'pp-v1';
+                const ASSETS = ['/'];
+                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS))));
+                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+            `;
+            const swBlob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(swBlob);
+            navigator.serviceWorker.register(swUrl).catch(() => {});
         }
     });
     </script>
