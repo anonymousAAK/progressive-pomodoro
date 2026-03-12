@@ -1,0 +1,65 @@
+/* ===== Stats grid (4 summary cards) ===== */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.stats-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; text-align: center; }
+.stats-card .s-value { font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: 700; }
+.stats-card .s-label { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ===== Focus distribution bar ===== */
+.focus-distribution { display: flex; gap: 4px; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+.focus-dist-bar { transition: width 0.6s ease; min-width: 0; }
+.focus-dist-bar.distracted { background: var(--accent-distracted); }
+.focus-dist-bar.okay       { background: var(--accent-okay); }
+.focus-dist-bar.focused    { background: var(--accent-focused); }
+.focus-dist-bar.flow       { background: var(--accent-flow); }
+.focus-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.focus-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--text-secondary); }
+.focus-legend-dot  { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ===== Calendar heatmap ===== */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--accent-work);
+  opacity: calc(0.06 + var(--intensity, 0) * 0.74);
+  transition: opacity 0.3s ease;
+  cursor: default;
+}
+.heatmap-cell.today {
+  outline: 2px solid var(--accent-work);
+  outline-offset: 1px;
+}
+.heatmap-legend {
+  display: flex; align-items: center; gap: 6px; margin-top: 6px;
+}
+.heatmap-legend-cells { display: flex; gap: 3px; }
+.heatmap-legend-cells .heatmap-cell { width: 12px; height: 12px; aspect-ratio: unset; }
+
+/* ===== Personal records ===== */
+.records-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.record-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 10px; text-align: center;
+}
+.record-icon  { font-size: 1.4rem; margin-bottom: 6px; }
+.record-value { font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 700; color: var(--accent-work); }
+.record-label { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ===== Achievements ===== */
+.achievements-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.badge {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); transition: var(--transition);
+}
+.badge.unlocked { border-color: var(--accent-work); background: rgba(99,102,241,0.07); }
+.badge.locked   { opacity: 0.4; filter: grayscale(0.5); }
+.badge-icon { font-size: 1.6rem; flex-shrink: 0; }
+.badge-info { min-width: 0; }
+.badge-name { font-size: 0.78rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.badge-desc { font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
