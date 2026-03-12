@@ -1,12 +1,12 @@
-import { state, TIMER_PRESETS } from './state.js';
+import { state, TIMER_PRESETS, BREAK_ACTIVITIES } from './state.js';
 import { dom } from './dom.js';
 import { playSound, startAmbient, stopAmbient } from './audio.js';
 import { applyTheme, applyAccent, applyFontSize, applyAnimations, applyReducedMotion } from './theme.js';
-import { loadSettings, saveSettings, backupData, restoreData, exportHistoryCSV, clearHistory } from './storage.js';
+import { loadSettings, saveSettings, backupData, restoreData, exportHistoryCSV, clearHistory, saveTaskQueue, importSessionsCSV } from './storage.js';
 import { startTimer, pauseTimer, resetTimer, switchMode } from './timer.js';
 import { handleRating } from './rating.js';
 import { getFocusTip } from './tips.js';
-import { renderHistory, renderWeeklyChart, renderStats, updateTopStats, showToast } from './render.js';
+import { renderHistory, renderWeeklyChart, renderStats, updateTopStats, showToast, renderTaskQueue } from './render.js';
 
 export function registerAllEvents() {
   // --- Start / Pause ---
@@ -183,6 +183,161 @@ export function registerAllEvents() {
       renderStats,
       updateTopStats,
     ]);
+  });
+
+  // --- Count-up toggle ---
+  if (dom.countUpToggle) {
+    dom.countUpToggle.addEventListener('change', e => {
+      state.countUp = e.target.checked;
+      localStorage.setItem('pp_countUp', e.target.checked);
+    });
+  }
+
+  // --- Micro-break toggle ---
+  if (dom.microBreakEnabled) {
+    dom.microBreakEnabled.addEventListener('change', e => {
+      state.microBreakEnabled = e.target.checked;
+      localStorage.setItem('pp_microBreak', e.target.checked);
+    });
+  }
+
+  // --- Affirmations toggle ---
+  const affirmToggle = document.getElementById('affirmations-enabled');
+  if (affirmToggle) {
+    affirmToggle.addEventListener('change', e => {
+      state.affirmationsEnabled = e.target.checked;
+      localStorage.setItem('pp_affirmations', e.target.checked);
+    });
+  }
+
+  // --- Session target input ---
+  if (dom.sessionTargetInput) {
+    dom.sessionTargetInput.addEventListener('change', e => {
+      state.sessionTarget = parseInt(e.target.value, 10) || 0;
+      localStorage.setItem('pp_sessionTarget', state.sessionTarget);
+      import('./render.js').then(m => m.renderSessionTarget());
+    });
+  }
+
+  // --- Energy level buttons ---
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.energy-btn');
+    if (!btn) return;
+    document.querySelectorAll('.energy-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.currentEnergy = btn.dataset.energy;
+  });
+
+  // --- Next activity button ---
+  if (dom.nextActivityBtn) {
+    dom.nextActivityBtn.addEventListener('click', () => {
+      if (dom.breakActivityText) {
+        dom.breakActivityText.textContent = BREAK_ACTIVITIES[Math.floor(Math.random() * BREAK_ACTIVITIES.length)];
+      }
+    });
+  }
+
+  // --- Focus mode button ---
+  if (dom.focusModeBtn) {
+    dom.focusModeBtn.addEventListener('click', () => {
+      state.isFocusMode = !state.isFocusMode;
+      document.getElementById('app').classList.toggle('focus-mode', state.isFocusMode);
+      dom.focusModeBtn.textContent = state.isFocusMode ? '✕' : '⛶';
+    });
+  }
+
+  // --- Quick switch ---
+  if (dom.quickSwitchBtn) {
+    dom.quickSwitchBtn.addEventListener('click', () => {
+      const val = dom.quickSwitchInput ? dom.quickSwitchInput.value.trim() : '';
+      if (val) {
+        state.currentTask = val;
+        if (dom.taskInput) dom.taskInput.value = val;
+        if (dom.quickSwitchInput) dom.quickSwitchInput.value = '';
+        showToast('Task switched!');
+      }
+    });
+  }
+
+  // --- Task queue ---
+  const newTaskInput = document.getElementById('new-task-input');
+  const addTaskBtn   = document.getElementById('add-task-btn');
+  const priorityChips = document.querySelectorAll('.priority-chip');
+  let selectedPriority = 'medium';
+
+  priorityChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      priorityChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      selectedPriority = chip.dataset.priority;
+    });
+  });
+
+  function addTask() {
+    const name = newTaskInput ? newTaskInput.value.trim() : '';
+    if (!name) return;
+    const task = { id: state.nextTaskId++, name, priority: selectedPriority, done: false };
+    state.taskQueue.push(task);
+    saveTaskQueue();
+    if (newTaskInput) newTaskInput.value = '';
+    renderTaskQueue();
+  }
+
+  if (addTaskBtn) addTaskBtn.addEventListener('click', addTask);
+  if (newTaskInput) {
+    newTaskInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+  }
+
+  // Task queue item interactions (delegated)
+  const taskQueueList = document.getElementById('task-queue-list');
+  if (taskQueueList) {
+    taskQueueList.addEventListener('click', e => {
+      const item = e.target.closest('.task-item');
+      if (!item) return;
+      const id = parseInt(item.dataset.id, 10);
+
+      if (e.target.closest('.task-item-check')) {
+        const task = state.taskQueue.find(t => t.id === id);
+        if (task) { task.done = !task.done; saveTaskQueue(); renderTaskQueue(); }
+      } else if (e.target.closest('.btn-focus-task')) {
+        const task = state.taskQueue.find(t => t.id === id);
+        if (task) {
+          if (dom.taskInput) dom.taskInput.value = task.name;
+          state.currentTask = task.name;
+          // Switch to timer tab
+          dom.navBtns.forEach(b => b.classList.remove('active'));
+          dom.pages.forEach(p => p.classList.remove('active'));
+          const timerBtn = document.querySelector('[data-target="timer-page"]');
+          if (timerBtn) timerBtn.classList.add('active');
+          const timerPage = document.getElementById('timer-page');
+          if (timerPage) timerPage.classList.add('active');
+        }
+      } else if (e.target.closest('.btn-delete-task')) {
+        state.taskQueue = state.taskQueue.filter(t => t.id !== id);
+        saveTaskQueue();
+        renderTaskQueue();
+      }
+    });
+  }
+
+  // --- Import CSV ---
+  const importCsvInput = document.getElementById('import-csv-input');
+  if (importCsvInput) {
+    importCsvInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      importSessionsCSV(file, showToast, [renderHistory, renderWeeklyChart, renderStats, updateTopStats]);
+      e.target.value = '';
+    });
+  }
+
+  // --- Navigation (update to include tasks page) ---
+  // Navigation is already registered above, but we need renderTaskQueue on tasks tab
+  // Re-check nav handler — patch it here for tasks-page
+  dom.navBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.target === 'tasks-page') renderTaskQueue();
+    });
   });
 
   // --- Keyboard shortcuts ---

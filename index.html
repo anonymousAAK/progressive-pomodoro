@@ -7,7 +7,10 @@
   <meta name="description" content="A beautiful adaptive pomodoro timer that grows with your focus. Track sessions, build streaks, and cultivate deep work.">
   <meta name="theme-color" content="#0a0a0f">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>">
-
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/themes.css">
   <link rel="stylesheet" href="css/components.css">
@@ -15,7 +18,6 @@
   <link rel="stylesheet" href="css/history.css">
   <link rel="stylesheet" href="css/stats.css">
   <link rel="stylesheet" href="css/settings.css">
-  <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
@@ -25,6 +27,9 @@
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
   </div>
+
+  <!-- Affirmation overlay -->
+  <div id="affirmation-overlay" class="affirmation-overlay"></div>
 
   <div id="app">
 
@@ -63,8 +68,8 @@
       <button data-target="timer-page"   class="nav-btn active">Timer</button>
       <button data-target="history-page" class="nav-btn">History</button>
       <button data-target="stats-page"   class="nav-btn">Stats</button>
-      <button data-target="settings-page"class="nav-btn">Settings</button>
       <button data-target="tasks-page"   class="nav-btn">Tasks</button>
+      <button data-target="settings-page"class="nav-btn">Settings</button>
     </nav>
 
     <main>
@@ -89,7 +94,16 @@
 
           <!-- Intention setting -->
           <div class="intention-wrapper" id="intention-wrapper">
-            <input type="text" id="intention-input" class="task-input" placeholder="Set your intention for this session… (optional)" maxlength="80" autocomplete="off">
+            <input type="text" id="intention-input" class="task-input"
+              placeholder="Set your intention for this session… (optional)" maxlength="80" autocomplete="off">
+          </div>
+
+          <!-- Energy level row -->
+          <div class="energy-row" id="energy-row">
+            <span class="energy-label">Energy:</span>
+            <button class="energy-btn" data-energy="low">🔋 Low</button>
+            <button class="energy-btn" data-energy="medium">⚡ Medium</button>
+            <button class="energy-btn" data-energy="high">🚀 High</button>
           </div>
 
           <!-- Category chips -->
@@ -132,6 +146,11 @@
             </div>
           </div>
 
+          <!-- Focus score banner -->
+          <div class="focus-score-banner" id="focus-score-banner">
+            Today's focus score: <strong id="focus-score-value">—</strong>
+          </div>
+
           <!-- Timer controls -->
           <div class="timer-controls" id="timer-controls">
             <button class="btn btn-secondary" id="stop-btn" title="Reset (R)">⏹</button>
@@ -144,11 +163,27 @@
             <button class="btn btn-skip" id="skip-break-btn">Skip Break →</button>
           </div>
 
-          <!-- Distraction counter (shown while work timer runs) -->
+          <!-- Quick task switch (shown while timer running) -->
+          <div class="quick-switch-wrapper hidden" id="quick-switch-wrapper">
+            <input type="text" id="quick-switch-input" class="task-input"
+              placeholder="Switch task mid-session…" maxlength="60" autocomplete="off">
+            <button class="btn btn-secondary" id="quick-switch-btn">Switch</button>
+          </div>
+
+          <!-- Distraction counter -->
           <div class="distraction-wrapper hidden" id="distraction-wrapper">
             <button class="btn-distraction" id="distraction-btn">
               <span id="distraction-count">0</span> distractions
             </button>
+          </div>
+
+          <!-- Break activity suggestion -->
+          <div class="break-activity-card hidden" id="break-activity-card">
+            <div class="break-activity-header">
+              <span>🌿 Break Activity</span>
+              <button class="btn-icon" id="next-activity-btn" title="Next suggestion">↻</button>
+            </div>
+            <div class="break-activity-text" id="break-activity-text"></div>
           </div>
 
           <!-- Focus rating -->
@@ -157,27 +192,18 @@
             <p class="focus-rating-subtitle">This adjusts your next work interval</p>
             <div class="focus-grid">
               <button data-rating="distracted" class="focus-btn focus-btn-distracted">
-                <span class="focus-emoji">😵‍💫</span>
-                Distracted
-                <span class="focus-effect">−interval</span>
+                <span class="focus-emoji">😵‍💫</span>Distracted<span class="focus-effect">−interval</span>
               </button>
               <button data-rating="okay" class="focus-btn focus-btn-okay">
-                <span class="focus-emoji">😐</span>
-                Okay
-                <span class="focus-effect">no change</span>
+                <span class="focus-emoji">😐</span>Okay<span class="focus-effect">no change</span>
               </button>
               <button data-rating="focused" class="focus-btn focus-btn-focused">
-                <span class="focus-emoji">🎯</span>
-                Focused
-                <span class="focus-effect">+interval</span>
+                <span class="focus-emoji">🎯</span>Focused<span class="focus-effect">+interval</span>
               </button>
               <button data-rating="flow" class="focus-btn focus-btn-flow">
-                <span class="focus-emoji">🚀</span>
-                Flow State
-                <span class="focus-effect">+2× interval</span>
+                <span class="focus-emoji">🚀</span>Flow State<span class="focus-effect">+2× interval</span>
               </button>
             </div>
-            <!-- Post-session note -->
             <div class="session-note-wrapper">
               <textarea id="session-note-input" class="session-note-input" rows="2" maxlength="120"
                 placeholder="Quick note about this session… (optional)"></textarea>
@@ -227,10 +253,7 @@
         <div class="card">
           <div class="card-title">Recent Sessions</div>
           <div class="history-list" id="history-list">
-            <div class="history-empty">
-              <div class="empty-icon">📋</div>
-              <p>No sessions yet. Start your first pomodoro!</p>
-            </div>
+            <div class="history-empty"><div class="empty-icon">📋</div><p>No sessions yet. Start your first pomodoro!</p></div>
           </div>
         </div>
       </div>
@@ -238,35 +261,21 @@
       <!-- ===== STATS PAGE ===== -->
       <div id="stats-page" class="page">
         <h2 style="font-size:1.3rem;font-weight:700;margin-bottom:16px;">Statistics</h2>
-
-        <!-- Summary cards -->
         <div class="stats-grid">
-          <div class="stats-card">
-            <div class="s-value" id="total-focus-time" style="color:var(--accent-work);">0h</div>
-            <div class="s-label">Total Focus Time</div>
-          </div>
-          <div class="stats-card">
-            <div class="s-value" id="total-sessions-stat" style="color:var(--accent-break);">0</div>
-            <div class="s-label">Total Sessions</div>
-          </div>
-          <div class="stats-card">
-            <div class="s-value" id="avg-duration" style="color:var(--accent-success);">0m</div>
-            <div class="s-label">Avg Duration</div>
-          </div>
-          <div class="stats-card">
-            <div class="s-value" id="best-streak" style="color:var(--accent-warning);">0</div>
-            <div class="s-label">Best Streak</div>
-          </div>
+          <div class="stats-card"><div class="s-value" id="total-focus-time" style="color:var(--accent-work);">0h</div><div class="s-label">Total Focus Time</div></div>
+          <div class="stats-card"><div class="s-value" id="total-sessions-stat" style="color:var(--accent-break);">0</div><div class="s-label">Total Sessions</div></div>
+          <div class="stats-card"><div class="s-value" id="avg-duration" style="color:var(--accent-success);">0m</div><div class="s-label">Avg Duration</div></div>
+          <div class="stats-card"><div class="s-value" id="best-streak" style="color:var(--accent-warning);">0</div><div class="s-label">Best Streak</div></div>
         </div>
-
-        <!-- Focus distribution -->
         <div class="card">
           <div class="card-title">Focus Distribution</div>
           <div class="focus-distribution" id="focus-distribution"></div>
           <div class="focus-legend" id="focus-legend"></div>
         </div>
-
-        <!-- Calendar heatmap -->
+        <div class="card">
+          <div class="card-title">Weekly Summary</div>
+          <p id="weekly-summary-text" style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">No sessions this week yet.</p>
+        </div>
         <div class="card">
           <div class="card-title">Last 35 Days</div>
           <div class="heatmap-grid" id="heatmap-grid"></div>
@@ -282,26 +291,69 @@
             <span style="color:var(--text-muted);font-size:0.65rem;">More</span>
           </div>
         </div>
-
-        <!-- Personal records -->
+        <div class="card">
+          <div class="card-title">Focus by Hour of Day</div>
+          <div class="hourly-chart" id="hourly-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Average Focus by Day of Week</div>
+          <div class="weekly-chart" id="dow-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Rating Trend (14 days)</div>
+          <svg id="rating-trend-svg" width="100%" height="60" viewBox="0 0 300 60" preserveAspectRatio="none" style="overflow:visible;"></svg>
+        </div>
+        <div class="card">
+          <div class="card-title">Session Duration Distribution</div>
+          <div id="duration-dist"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Time by Task</div>
+          <div id="task-history"></div>
+        </div>
         <div class="card">
           <div class="card-title">Personal Records</div>
-          <div class="records-grid" id="records-grid">
-            <p style="color:var(--text-muted);font-size:0.85rem;">Complete sessions to see records</p>
-          </div>
+          <div class="records-grid" id="records-grid"><p style="color:var(--text-muted);font-size:0.85rem;">Complete sessions to see records</p></div>
         </div>
-
-        <!-- Achievements -->
         <div class="card">
           <div class="card-title">Achievements</div>
           <div class="achievements-grid" id="achievements-grid"></div>
         </div>
-
-        <!-- Longest sessions -->
         <div class="card">
           <div class="card-title">Longest Sessions</div>
-          <div id="longest-sessions">
-            <p style="color:var(--text-muted);font-size:0.85rem;">No data yet</p>
+          <div id="longest-sessions"><p style="color:var(--text-muted);font-size:0.85rem;">No data yet</p></div>
+        </div>
+      </div>
+
+      <!-- ===== TASKS PAGE ===== -->
+      <div id="tasks-page" class="page">
+        <div class="tasks-header">
+          <h2>Task Queue</h2>
+          <span id="task-progress" class="task-progress-text"></span>
+        </div>
+        <div class="card">
+          <div class="add-task-form">
+            <input type="text" id="new-task-input" class="task-input"
+              placeholder="New task name…" maxlength="80" autocomplete="off">
+            <div class="priority-row">
+              <span class="priority-label">Priority:</span>
+              <button class="priority-chip" data-priority="low">Low</button>
+              <button class="priority-chip active" data-priority="medium">Med</button>
+              <button class="priority-chip" data-priority="high">High</button>
+            </div>
+            <button class="btn btn-primary" id="add-task-btn">Add Task</button>
+          </div>
+        </div>
+        <div class="card">
+          <div id="task-queue-list" class="task-queue-list">
+            <div class="tasks-empty">No tasks yet. Add one above!</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Import Session Data</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Import CSV</div><div class="setting-desc">Merge sessions from exported CSV file</div></div>
+            <label class="btn btn-secondary-action" style="cursor:pointer;">Import<input type="file" accept=".csv" id="import-csv-input" style="display:none"></label>
           </div>
         </div>
       </div>
@@ -310,8 +362,6 @@
       <div id="settings-page" class="page">
         <div class="settings-section">
           <h2>Settings</h2>
-
-          <!-- Timer durations -->
           <div class="card">
             <div class="card-title">Timer</div>
             <div class="setting-row">
@@ -319,7 +369,7 @@
               <input type="number" id="initial-work" class="setting-input" min="1" max="120" value="5">
             </div>
             <div class="setting-row">
-              <div><div class="setting-label">Adjustment</div><div class="setting-desc">Time added/removed (min)</div></div>
+              <div><div class="setting-label">Adjustment</div><div class="setting-desc">Time added/removed per rating (min)</div></div>
               <input type="number" id="interval-adjust" class="setting-input" min="1" max="30" value="2">
             </div>
             <div class="setting-row">
@@ -330,9 +380,15 @@
               <div><div class="setting-label">Long Break</div><div class="setting-desc">After every 4 sessions (min)</div></div>
               <input type="number" id="long-break-duration" class="setting-input" min="1" max="60" value="15">
             </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Session Target</div><div class="setting-desc">Daily session goal (0 = off)</div></div>
+              <input type="number" id="session-target" class="setting-input" min="0" max="20" value="0">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Count Up Mode</div><div class="setting-desc">Show elapsed time instead of countdown</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="count-up-toggle"><span class="toggle-track"></span></label>
+            </div>
           </div>
-
-          <!-- Notifications & auto-start -->
           <div class="card">
             <div class="card-title">Notifications</div>
             <div class="setting-row">
@@ -351,9 +407,15 @@
               <div><div class="setting-label">Auto-start Work</div><div class="setting-desc">Start work timer after break</div></div>
               <label class="toggle-switch"><input type="checkbox" id="auto-work"><span class="toggle-track"></span></label>
             </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Micro-break Reminders</div><div class="setting-desc">30s stretch prompt during long sessions</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="micro-break-enabled" checked><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Focus Affirmations</div><div class="setting-desc">Motivational message at session start</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="affirmations-enabled" checked><span class="toggle-track"></span></label>
+            </div>
           </div>
-
-          <!-- Appearance -->
           <div class="card">
             <div class="card-title">Appearance</div>
             <div class="setting-row">
@@ -394,8 +456,6 @@
               <label class="toggle-switch"><input type="checkbox" id="reduced-motion"><span class="toggle-track"></span></label>
             </div>
           </div>
-
-          <!-- Ambient sounds -->
           <div class="card">
             <div class="card-title">Ambient Sounds</div>
             <div class="ambient-options">
@@ -405,8 +465,6 @@
               <button class="ambient-btn" data-ambient="lofi">Lo-fi Pads</button>
             </div>
           </div>
-
-          <!-- Data management -->
           <div class="card">
             <div class="card-title">Data Management</div>
             <div class="setting-row">
@@ -415,19 +473,15 @@
             </div>
             <div class="setting-row">
               <div><div class="setting-label">Import Backup</div><div class="setting-desc">Restore from JSON backup</div></div>
-              <label class="btn btn-secondary-action" style="cursor:pointer;">
-                Import
-                <input type="file" accept=".json" id="restore-input" style="display:none">
-              </label>
+              <label class="btn btn-secondary-action" style="cursor:pointer;">Import<input type="file" accept=".json" id="restore-input" style="display:none"></label>
             </div>
           </div>
-
           <button class="btn btn-save" id="save-settings-btn">Save Settings</button>
         </div>
       </div>
 
     </main>
-  </div><!-- /#app -->
+  </div>
 
   <div class="save-toast" id="save-toast">Settings saved!</div>
   <div class="celebration" id="celebration"></div>

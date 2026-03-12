@@ -1,10 +1,14 @@
-import { state, POMODOROS_BEFORE_LONG_BREAK } from './state.js';
+import { state, POMODOROS_BEFORE_LONG_BREAK, MILESTONES, calculateXP } from './state.js';
 import { dom } from './dom.js';
 import { playSound } from './audio.js';
 import { saveHistory, saveStreak } from './storage.js';
-import { updateTopStats, renderHistory, renderWeeklyChart, renderStats, renderDailyChallenge } from './render.js';
+import { updateTopStats, renderHistory, renderWeeklyChart, renderStats, renderDailyChallenge, showToast, showMilestoneCelebration, checkFocusTrend } from './render.js';
 import { switchMode, startTimer } from './timer.js';
 import { updateStreak, checkAchievements } from './gamification.js';
+
+// BroadcastChannel for multi-tab sync (shared via window)
+let _bc = null;
+export function setRatingBC(bc) { _bc = bc; }
 
 export function handleRating(rating) {
   state.lastFocusRating = rating;
@@ -27,11 +31,39 @@ export function handleRating(rating) {
     rating:      rating.charAt(0).toUpperCase() + rating.slice(1),
     distractions: state.distractionCount,
     note,
+    energy:      state.currentEnergy,
+    intention:   state.currentIntention,
     timestamp:   new Date().toISOString(),
     displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     date:        new Date().toDateString(),
   });
   saveHistory();
+
+  // Notify other tabs
+  if (_bc) _bc.postMessage({ type: 'session_saved' });
+
+  // XP + Level
+  const earned = calculateXP(durationMin, rating);
+  state.xp += earned;
+  state.level = Math.floor(state.xp / 250) + 1;
+  localStorage.setItem('pp_xp', state.xp);
+  setTimeout(() => showToast(`+${earned} XP`), 100);
+
+  // Milestone check
+  if (MILESTONES.has(state.sessionHistory.length)) {
+    setTimeout(() => showMilestoneCelebration(state.sessionHistory.length), 400);
+  }
+
+  // Focus trend check
+  checkFocusTrend();
+
+  // Reset energy
+  state.currentEnergy = '';
+  document.querySelectorAll('.energy-btn').forEach(b => b.classList.remove('active'));
+
+  // Clear intention input
+  if (dom.intentionInput) dom.intentionInput.value = '';
+  state.currentIntention = '';
 
   // Reset distraction counter
   state.distractionCount = 0;

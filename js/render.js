@@ -1,4 +1,4 @@
-import { state, ACHIEVEMENTS, DAILY_CHALLENGES, RING_CIRCUMFERENCE, POMODOROS_BEFORE_LONG_BREAK } from './state.js';
+import { state, ACHIEVEMENTS, DAILY_CHALLENGES, RING_CIRCUMFERENCE, POMODOROS_BEFORE_LONG_BREAK, AFFIRMATIONS } from './state.js';
 import { dom } from './dom.js';
 
 // --- Utilities ---
@@ -22,11 +22,16 @@ export function updateTopStats() {
   const todaySessions = state.sessionHistory.filter(s => s.date === today);
   const todayMins = todaySessions.reduce((sum, s) => sum + s.duration, 0);
 
-  dom.streakValue.textContent  = state.streakData.current;
+  // Streak with shield count
+  const shieldStr = state.streakShields > 0 ? ` 🛡️${state.streakShields}` : '';
+  dom.streakValue.textContent  = state.streakData.current + shieldStr;
   dom.todayMinutes.textContent = todayMins >= 60
     ? `${(todayMins / 60).toFixed(1)}h`
     : `${Math.round(todayMins)}m`;
   dom.sessionCount.textContent = todaySessions.length;
+  if (dom.xpValue) dom.xpValue.textContent = 'Lv.' + state.level;
+  renderSessionTarget();
+  renderFocusScore();
 }
 
 // --- Ring progress ---
@@ -166,6 +171,13 @@ export function renderStats() {
   renderRecords();
   renderAchievements();
   renderDailyChallenge();
+  renderWeeklySummary();
+  renderHourlyChart();
+  renderDurationDistribution();
+  renderRatingTrend();
+  renderDayOfWeekChart();
+  renderTaskHistory();
+  renderFocusScore();
 }
 
 // --- Calendar heatmap (last 35 days) ---
@@ -256,6 +268,29 @@ export function renderDailyChallenge() {
   dom.challengeStatus.style.color   = done ? 'var(--accent-success)' : 'var(--text-muted)';
 }
 
+// --- Task queue ---
+
+export function renderTaskQueue() {
+  const list = document.getElementById('task-queue-list');
+  const progress = document.getElementById('task-progress');
+  if (!list) return;
+  if (state.taskQueue.length === 0) {
+    list.innerHTML = '<div class="tasks-empty">No tasks yet. Add one above!</div>';
+    if (progress) progress.textContent = '';
+    return;
+  }
+  const done = state.taskQueue.filter(t => t.done).length;
+  if (progress) progress.textContent = `Completed: ${done}/${state.taskQueue.length}`;
+  list.innerHTML = state.taskQueue.map(task => `
+    <div class="task-item${task.done ? ' done' : ''}" data-id="${task.id}">
+      <div class="task-item-check${task.done ? ' checked' : ''}">${task.done ? '✓' : ''}</div>
+      <div class="priority-dot ${task.priority}"></div>
+      <div class="task-item-name${task.done ? ' done-text' : ''}">${escapeHtml(task.name)}</div>
+      <button class="btn-focus-task" title="Focus on this task">▶ Focus</button>
+      <button class="btn-delete-task" title="Delete" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;padding:4px;">✕</button>
+    </div>`).join('');
+}
+
 // --- Toast ---
 
 export function showToast(msg) {
@@ -267,11 +302,16 @@ export function showToast(msg) {
 // --- Timer display (called by timer.js) ---
 
 export function updateTimerDisplay(secondsLeft, totalSeconds, currentMode, timerInterval) {
+  // secondsLeft may be "elapsed" if countUp mode is active (passed adjusted from timer.js)
   dom.timerDisplay.textContent = formatTime(secondsLeft);
-  const percent = totalSeconds > 0 ? (totalSeconds - secondsLeft) / totalSeconds : 0;
+  // Ring always uses actual remaining seconds (caller passes correct value for display,
+  // but ring percent is based on elapsed regardless of count-up mode)
+  const elapsed = state.countUp ? secondsLeft : (totalSeconds - secondsLeft);
+  const percent = totalSeconds > 0 ? elapsed / totalSeconds : 0;
   dom.ringProgress.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - percent);
   dom.ringProgress.classList.toggle('break-mode', currentMode !== 'work');
 
+  const displayForTitle = state.countUp ? secondsLeft : secondsLeft;
   document.title = timerInterval
     ? `${formatTime(secondsLeft)} - ${currentMode === 'work' ? 'Work' : 'Break'} | Progressive Pomodoro`
     : 'Progressive Pomodoro';
@@ -297,4 +337,250 @@ export function showCelebration() {
     dom.celebration.appendChild(c);
   }
   setTimeout(() => dom.celebration.classList.remove('show'), 2500);
+}
+
+// --- Milestone celebration ---
+
+export function showMilestoneCelebration(n) {
+  dom.celebration.innerHTML = '';
+  dom.celebration.classList.add('show');
+  const colors = ['#f59e0b', '#fbbf24', '#fcd34d', '#6366f1', '#8b5cf6', '#ec4899', '#10b981', '#06b6d4'];
+  for (let i = 0; i < 80; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.cssText = `left:${Math.random() * 100}%;top:-10px;background:${colors[Math.floor(Math.random() * colors.length)]};animation-delay:${Math.random() * 0.8}s;animation-duration:${1.5 + Math.random() * 1.5}s`;
+    dom.celebration.appendChild(c);
+  }
+  // Overlay message
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,15,0.92);border:2px solid #f59e0b;border-radius:16px;padding:24px 32px;font-size:1.4rem;font-weight:700;color:#fcd34d;text-align:center;z-index:200;';
+  overlay.textContent = `🎉 Session #${n}!`;
+  document.body.appendChild(overlay);
+  setTimeout(() => { dom.celebration.classList.remove('show'); overlay.remove(); }, 3500);
+}
+
+// --- Affirmation overlay ---
+
+export function showAffirmation() {
+  if (!dom.affirmationOverlay) return;
+  dom.affirmationOverlay.textContent = AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)];
+  dom.affirmationOverlay.classList.add('show');
+  setTimeout(() => dom.affirmationOverlay.classList.remove('show'), 2500);
+}
+
+// --- Session target ---
+
+export function renderSessionTarget() {
+  if (!dom.sessionTargetRow) return;
+  if (!state.sessionTarget || state.sessionTarget <= 0) {
+    dom.sessionTargetRow.classList.add('hidden');
+    return;
+  }
+  const today = new Date().toDateString();
+  const count = state.sessionHistory.filter(s => s.date === today).length;
+  dom.sessionTargetRow.classList.remove('hidden');
+  if (dom.sessionTargetText) dom.sessionTargetText.textContent = `${count} / ${state.sessionTarget} today`;
+  if (dom.targetBarFill) {
+    const pct = Math.min(100, (count / state.sessionTarget) * 100);
+    dom.targetBarFill.style.width = pct + '%';
+  }
+}
+
+// --- Focus score ---
+
+export function renderFocusScore() {
+  const banner = document.getElementById('focus-score-banner');
+  const valueEl = document.getElementById('focus-score-value');
+  if (!banner || !valueEl) return;
+  const today = new Date().toDateString();
+  const todaySessions = state.sessionHistory.filter(s => s.date === today);
+  if (todaySessions.length === 0) { valueEl.textContent = '—'; return; }
+  const ratingScore = { Distracted: 0, Okay: 33, Focused: 66, Flow: 100 };
+  const avg = todaySessions.reduce((sum, s) => sum + (ratingScore[s.rating] || 0), 0) / todaySessions.length;
+  const factor = Math.min(1, todaySessions.length / 4);
+  const score = Math.round(avg * (0.7 + 0.3 * factor));
+  valueEl.textContent = score;
+}
+
+// --- Focus trend alert ---
+
+export function checkFocusTrend() {
+  const last3 = state.sessionHistory.slice(0, 3);
+  if (last3.length < 3) return;
+  const allLow = last3.every(s => s.rating === 'Distracted' || s.rating === 'Okay');
+  if (allLow) {
+    setTimeout(() => showToast('⚠️ Focus has been low lately — consider a break or change of environment'), 600);
+  }
+}
+
+// --- Weekly summary ---
+
+export function renderWeeklySummary() {
+  const el = document.getElementById('weekly-summary-text');
+  if (!el) return;
+  const today = new Date();
+  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 6);
+  const weekSessions = state.sessionHistory.filter(s => {
+    try { return new Date(s.timestamp) >= weekAgo; } catch { return false; }
+  });
+  if (weekSessions.length === 0) { el.textContent = 'No sessions this week yet.'; return; }
+  const totalMins = weekSessions.reduce((sum, s) => sum + s.duration, 0);
+  const hours = (totalMins / 60).toFixed(1);
+  // Best day
+  const dayCounts = {};
+  weekSessions.forEach(s => { dayCounts[s.date] = (dayCounts[s.date] || 0) + 1; });
+  const bestDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0];
+  const bestDayName = new Date(bestDay[0]).toLocaleDateString('en-US', { weekday: 'long' });
+  // Most common rating
+  const ratingCounts = {};
+  weekSessions.forEach(s => { ratingCounts[s.rating] = (ratingCounts[s.rating] || 0) + 1; });
+  const topRating = Object.entries(ratingCounts).sort((a, b) => b[1] - a[1])[0][0];
+  const streakLine = state.streakData.current > 1 ? ` You're on a ${state.streakData.current}-day streak!` : '';
+  el.textContent = `This week: ${weekSessions.length} session${weekSessions.length !== 1 ? 's' : ''}, ${hours}h focus time. Best day: ${bestDayName} with ${bestDay[1]} session${bestDay[1] !== 1 ? 's' : ''}. Most common rating: ${topRating}.${streakLine}`;
+}
+
+// --- Hourly chart ---
+
+export function renderHourlyChart() {
+  if (!dom.hourlyChart) return;
+  const hourMins = new Array(24).fill(0);
+  state.sessionHistory.forEach(s => {
+    try {
+      const h = new Date(s.timestamp).getHours();
+      hourMins[h] += s.duration;
+    } catch {}
+  });
+  const displayHours = [];
+  for (let h = 6; h <= 23; h++) displayHours.push(h);
+  const maxMins = Math.max(...displayHours.map(h => hourMins[h]), 1);
+  dom.hourlyChart.innerHTML = displayHours.map(h => {
+    const mins = hourMins[h];
+    const heightPct = (mins / maxMins) * 100;
+    const label = h === 12 ? '12p' : h > 12 ? `${h - 12}p` : `${h}a`;
+    return `
+    <div class="hourly-bar-wrapper">
+      <div class="hourly-bar-track">
+        <div class="hourly-bar" style="height:${heightPct}%"></div>
+      </div>
+      <div class="hourly-label">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+// --- Duration distribution ---
+
+export function renderDurationDistribution() {
+  const el = document.getElementById('duration-dist');
+  if (!el) return;
+  const buckets = [
+    { label: '<10m',   min: 0,  max: 10  },
+    { label: '10-20m', min: 10, max: 20  },
+    { label: '20-30m', min: 20, max: 30  },
+    { label: '30-45m', min: 30, max: 45  },
+    { label: '45m+',   min: 45, max: Infinity },
+  ];
+  buckets.forEach(b => {
+    b.count = state.sessionHistory.filter(s => s.duration >= b.min && s.duration < b.max).length;
+  });
+  const maxCount = Math.max(...buckets.map(b => b.count), 1);
+  el.innerHTML = buckets.map(b => `
+    <div class="dur-dist-item">
+      <div class="dur-dist-label">${b.label}</div>
+      <div class="dur-dist-track">
+        <div class="dur-dist-bar" style="width:${(b.count / maxCount) * 100}%"></div>
+      </div>
+      <div class="dur-dist-count">${b.count}</div>
+    </div>`).join('');
+}
+
+// --- Rating trend (SVG sparkline) ---
+
+export function renderRatingTrend() {
+  const svg = document.getElementById('rating-trend-svg');
+  if (!svg) return;
+  const ratingVal = { Distracted: 0, Okay: 1, Focused: 2, Flow: 3 };
+  const today = new Date();
+  const points = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const dateStr = d.toDateString();
+    const daySessions = state.sessionHistory.filter(s => s.date === dateStr);
+    if (daySessions.length > 0) {
+      const avg = daySessions.reduce((sum, s) => sum + (ratingVal[s.rating] || 0), 0) / daySessions.length;
+      points.push({ x: 13 - i, y: avg });
+    } else {
+      points.push({ x: 13 - i, y: null });
+    }
+  }
+  const validPoints = points.filter(p => p.y !== null);
+  if (validPoints.length < 2) { svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="var(--text-muted)" font-size="10">Not enough data</text>'; return; }
+  const W = 300, H = 60, pad = 10;
+  const xScale = (W - pad * 2) / 13;
+  const yScale = (H - pad * 2) / 3;
+  const toX = i => pad + i * xScale;
+  const toY = v => H - pad - v * yScale;
+  const pathParts = [];
+  let first = true;
+  points.forEach(p => {
+    if (p.y === null) { first = true; return; }
+    if (first) { pathParts.push(`M${toX(p.x).toFixed(1)},${toY(p.y).toFixed(1)}`); first = false; }
+    else        { pathParts.push(`L${toX(p.x).toFixed(1)},${toY(p.y).toFixed(1)}`); }
+  });
+  svg.innerHTML = `
+    <defs><linearGradient id="trendGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="var(--accent-distracted)"/>
+      <stop offset="100%" stop-color="var(--accent-flow)"/>
+    </linearGradient></defs>
+    <path d="${pathParts.join(' ')}" fill="none" stroke="url(#trendGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${validPoints.map(p => `<circle cx="${toX(p.x).toFixed(1)}" cy="${toY(p.y).toFixed(1)}" r="3" fill="var(--accent-work)"/>`).join('')}`;
+}
+
+// --- Day of week chart ---
+
+export function renderDayOfWeekChart() {
+  if (!dom.dowChart) return;
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayMins = new Array(7).fill(0);
+  const dayCounts = new Array(7).fill(0);
+  state.sessionHistory.forEach(s => {
+    try {
+      const dow = new Date(s.timestamp).getDay();
+      dayMins[dow] += s.duration;
+      dayCounts[dow]++;
+    } catch {}
+  });
+  const avgMins = dayMins.map((m, i) => dayCounts[i] > 0 ? m / dayCounts[i] : 0);
+  const maxAvg = Math.max(...avgMins, 1);
+  dom.dowChart.innerHTML = days.map((d, i) => {
+    const heightPct = (avgMins[i] / maxAvg) * 100;
+    return `
+    <div class="chart-bar-wrapper">
+      <div class="chart-value">${avgMins[i] > 0 ? Math.round(avgMins[i]) + 'm' : ''}</div>
+      <div class="chart-bar-track">
+        <div class="chart-bar" style="height:${heightPct}%"></div>
+      </div>
+      <div class="chart-label">${d}</div>
+    </div>`;
+  }).join('');
+}
+
+// --- Task history ---
+
+export function renderTaskHistory() {
+  const el = document.getElementById('task-history');
+  if (!el) return;
+  const taskTotals = {};
+  state.sessionHistory.forEach(s => {
+    const name = s.task || 'Untitled';
+    taskTotals[name] = (taskTotals[name] || 0) + s.duration;
+  });
+  const sorted = Object.entries(taskTotals).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (sorted.length === 0) { el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">No task data yet</p>'; return; }
+  const maxMins = sorted[0][1];
+  el.innerHTML = sorted.map(([name, mins]) => `
+    <div class="task-hist-item">
+      <div class="task-hist-name">${escapeHtml(name)}</div>
+      <div class="task-hist-bar-track"><div class="task-hist-bar" style="width:${(mins / maxMins) * 100}%"></div></div>
+      <div class="task-hist-mins">${Math.round(mins)}m</div>
+    </div>`).join('');
 }

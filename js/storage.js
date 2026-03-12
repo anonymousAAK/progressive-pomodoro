@@ -18,6 +18,16 @@ export function loadSettings() {
   state.reducedMotionEnabled= localStorage.getItem('pp_reducedMotion') === 'true';
   state.currentAmbient   = localStorage.getItem('pp_ambient')  || 'none';
   state.unlockedAchievements = JSON.parse(localStorage.getItem('pp_achievements') || '[]');
+  // Feature settings
+  state.countUp            = localStorage.getItem('pp_countUp') === 'true';
+  state.sessionTarget      = parseInt(localStorage.getItem('pp_sessionTarget') || '0', 10);
+  state.microBreakEnabled  = localStorage.getItem('pp_microBreak') !== 'false';
+  state.affirmationsEnabled= localStorage.getItem('pp_affirmations') !== 'false';
+  state.xp                 = parseInt(localStorage.getItem('pp_xp') || '0', 10);
+  state.level              = Math.floor(state.xp / 250) + 1;
+  state.streakShields      = parseInt(localStorage.getItem('pp_shields') || '0', 10);
+  state.taskQueue          = JSON.parse(localStorage.getItem('pp_taskQueue') || '[]');
+  state.nextTaskId         = parseInt(localStorage.getItem('pp_nextTaskId') || '1', 10);
 }
 
 export function saveSettings() {
@@ -125,4 +135,71 @@ export function clearHistory(callbacks) {
   state.sessionHistory = [];
   saveHistory();
   callbacks.forEach(fn => fn());
+}
+
+// --- Save task queue ---
+
+export function saveTaskQueue() {
+  localStorage.setItem('pp_taskQueue', JSON.stringify(state.taskQueue));
+  localStorage.setItem('pp_nextTaskId', state.nextTaskId);
+}
+
+// --- Import CSV sessions ---
+
+export function importSessionsCSV(file, showToastFn, callbacks) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const lines = e.target.result.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length < 2) { showToastFn('CSV is empty'); return; }
+      const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+      const taskIdx = headers.indexOf('task');
+      const durIdx  = headers.findIndex(h => h.includes('duration'));
+      const ratingIdx = headers.indexOf('rating');
+      const dateIdx   = headers.indexOf('date');
+      const timeIdx   = headers.indexOf('time');
+      if (taskIdx < 0 || durIdx < 0 || ratingIdx < 0) {
+        showToastFn('Invalid CSV: missing columns'); return;
+      }
+      const existingTs = new Set(state.sessionHistory.map(s => s.timestamp));
+      let added = 0;
+      for (let i = 1; i < lines.length; i++) {
+        // Parse CSV row handling quoted fields
+        const row = [];
+        let cur = '', inQ = false;
+        for (const ch of lines[i] + ',') {
+          if (ch === '"') { inQ = !inQ; }
+          else if (ch === ',' && !inQ) { row.push(cur.trim()); cur = ''; }
+          else cur += ch;
+        }
+        const task = row[taskIdx] || 'Untitled';
+        const dur  = parseFloat(row[durIdx]) || 0;
+        const rating = row[ratingIdx] || 'Okay';
+        const dateStr = dateIdx >= 0 ? row[dateIdx] : '';
+        const timeStr = timeIdx >= 0 ? row[timeIdx] : '';
+        // Build a timestamp
+        let ts;
+        try { ts = new Date(`${dateStr} ${timeStr}`).toISOString(); } catch { ts = new Date().toISOString(); }
+        if (existingTs.has(ts)) continue;
+        existingTs.add(ts);
+        state.sessionHistory.push({
+          mode: 'Work', task, duration: dur,
+          rating: rating.charAt(0).toUpperCase() + rating.slice(1),
+          distractions: 0, note: '',
+          timestamp: ts,
+          displayTime: timeStr,
+          date: dateStr || new Date(ts).toDateString(),
+        });
+        added++;
+      }
+      // Sort by timestamp desc
+      state.sessionHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      saveHistory();
+      showToastFn(`Imported ${added} session${added !== 1 ? 's' : ''}`);
+      callbacks.forEach(fn => fn());
+    } catch (err) {
+      showToastFn('Import failed: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
 }
