@@ -17,8 +17,21 @@ import {
   renderStats,
   renderDailyChallenge,
   renderSessionDots,
+  renderTaskQueue,
 } from './render.js';
 import { registerAllEvents } from './events.js';
+import { setRatingBC } from './rating.js';
+
+// --- BroadcastChannel for multi-tab sync ---
+const bc = new BroadcastChannel('pp_sync');
+bc.onmessage = (e) => {
+  if (e.data.type === 'session_saved') {
+    loadHistory();
+    updateTopStats();
+    renderHistory();
+  }
+};
+setRatingBC(bc);
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Load all persisted data into state
@@ -39,6 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
   dom.notifEnabled.checked    = state.notifEnabled;
   dom.autoBreak.checked       = state.autoBreak;
   dom.autoWork.checked        = state.autoWork;
+
+  // Sync new feature toggles
+  if (dom.countUpToggle) dom.countUpToggle.checked = state.countUp;
+  if (dom.microBreakEnabled) dom.microBreakEnabled.checked = state.microBreakEnabled;
+  if (dom.sessionTargetInput) dom.sessionTargetInput.value = state.sessionTarget;
+  const affirmToggle = document.getElementById('affirmations-enabled');
+  if (affirmToggle) affirmToggle.checked = state.affirmationsEnabled;
 
   // Highlight active ambient button
   document.querySelectorAll('.ambient-btn').forEach(b => {
@@ -62,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStats();
   renderSessionDots();
   renderDailyChallenge();
+  renderTaskQueue();
 
   // 7. Resume ambient sound if user had one active
   if (state.currentAmbient !== 'none') startAmbient(state.currentAmbient);
@@ -69,5 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 8. Request notification permission if needed
   if (state.notifEnabled && Notification.permission === 'default') {
     Notification.requestPermission();
+  }
+
+  // 9. Register service worker for PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 });
