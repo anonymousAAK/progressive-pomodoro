@@ -113,4 +113,44 @@ export const dom = {
   hourlyChart:        $('hourly-chart'),
   dowChart:           $('dow-chart'),
   microBreakEnabled:  $('micro-break-enabled'),
+
+  // New feature elements
+  warmupToggle:       $('warmup-toggle'),
+  overtimeToggle:     $('overtime-toggle'),
+  pauseLimitInput:    $('pause-limit-input'),
+  pauseCounter:       $('pause-counter'),
+  pausesRemaining:    $('pauses-remaining'),
+  lockoutInput:       $('lockout-input'),
+  lockoutBadge:       $('lockout-badge'),
+  lockoutCount:       $('lockout-count'),
+  minSessionInput:    $('min-session-input'),
+  winddownToggle:     $('winddown-toggle'),
+  winddownTimeInput:  $('winddown-time-input'),
+  reflectionPrompt:   $('reflection-prompt'),
+  reflectionQuestion: $('reflection-question'),
+  cognitiveLoadValue: $('cognitive-load-value'),
+
+  // Chain
+  chainSection:       $('chain-section'),
+  chainBody:          $('chain-body'),
+  chainToggleBtn:     $('chain-toggle-btn'),
+  chainDurationInput: $('chain-duration-input'),
+  chainTaskInput:     $('chain-task-input'),
+  chainAddBtn:        $('chain-add-btn'),
+  chainList:          $('chain-list'),
+  chainStartBtn:      $('chain-start-btn'),
+  chainClearBtn:      $('chain-clear-btn'),
+
+  // Mood & Complexity
+  moodBtns:           $$('.mood-btn'),
+  complexityStars:    $$('.complexity-star'),
+
+  // Tasks page
+  taskEstimateInput:  $('task-estimate-input'),
+  saveTemplateBtn:    $('save-template-btn'),
+  templateList:       $('template-list'),
+  showArchivedToggle: $('show-archived-toggle'),
+  recurringTaskInput: $('recurring-task-input'),
+  addRecurringBtn:    $('add-recurring-btn'),
+  recurringTaskList:  $('recurring-task-list'),
 };

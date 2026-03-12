@@ -28,6 +28,22 @@ export function loadSettings() {
   state.streakShields      = parseInt(localStorage.getItem('pp_shields') || '0', 10);
   state.taskQueue          = JSON.parse(localStorage.getItem('pp_taskQueue') || '[]');
   state.nextTaskId         = parseInt(localStorage.getItem('pp_nextTaskId') || '1', 10);
+
+  // New feature settings
+  state.warmUpEnabled      = localStorage.getItem('pp_warmUp') === 'true';
+  state.overtimeEnabled    = localStorage.getItem('pp_overtime') === 'true';
+  state.pauseLimit         = parseInt(localStorage.getItem('pp_pauseLimit') || '-1', 10);
+  state.lockoutSessions    = parseInt(localStorage.getItem('pp_lockoutSessions') || '0', 10);
+  state.lockoutRemaining   = parseInt(localStorage.getItem('pp_lockoutRemaining') || '0', 10);
+  state.minSessionMinutes  = parseInt(localStorage.getItem('pp_minSession') || '5', 10);
+  state.windDownEnabled    = localStorage.getItem('pp_windDown') === 'true';
+  state.windDownTime       = localStorage.getItem('pp_windDownTime') || '18:00';
+  state.sessionChain       = JSON.parse(localStorage.getItem('pp_sessionChain') || '[]');
+  state.recurringTasks     = JSON.parse(localStorage.getItem('pp_recurringTasks') || '[]');
+  state.nextRecurringId    = parseInt(localStorage.getItem('pp_nextRecurringId') || '1', 10);
+  state.taskTemplates      = JSON.parse(localStorage.getItem('pp_taskTemplates') || '[]');
+  state.nextTemplateId     = parseInt(localStorage.getItem('pp_nextTemplateId') || '1', 10);
+  state.lastSuggestionDate = localStorage.getItem('pp_lastSuggestionDate') || '';
 }
 
 export function saveSettings() {
@@ -45,6 +61,28 @@ export function saveSettings() {
   localStorage.setItem('pp_animations',   state.animationsEnabled);
   localStorage.setItem('pp_reducedMotion',state.reducedMotionEnabled);
   localStorage.setItem('pp_ambient',      state.currentAmbient);
+  // New feature settings
+  localStorage.setItem('pp_warmUp',       state.warmUpEnabled);
+  localStorage.setItem('pp_overtime',     state.overtimeEnabled);
+  localStorage.setItem('pp_pauseLimit',   state.pauseLimit);
+  localStorage.setItem('pp_lockoutSessions', state.lockoutSessions);
+  localStorage.setItem('pp_minSession',   state.minSessionMinutes);
+  localStorage.setItem('pp_windDown',     state.windDownEnabled);
+  localStorage.setItem('pp_windDownTime', state.windDownTime);
+}
+
+export function saveSessionChain() {
+  localStorage.setItem('pp_sessionChain', JSON.stringify(state.sessionChain));
+}
+
+export function saveRecurringTasks() {
+  localStorage.setItem('pp_recurringTasks', JSON.stringify(state.recurringTasks));
+  localStorage.setItem('pp_nextRecurringId', state.nextRecurringId);
+}
+
+export function saveTaskTemplates() {
+  localStorage.setItem('pp_taskTemplates', JSON.stringify(state.taskTemplates));
+  localStorage.setItem('pp_nextTemplateId', state.nextTemplateId);
 }
 
 export function loadHistory() {

@@ -1,4 +1,5 @@
-import { state, ACHIEVEMENTS, DAILY_CHALLENGES, RING_CIRCUMFERENCE, POMODOROS_BEFORE_LONG_BREAK, AFFIRMATIONS } from './state.js';
+import { state, ACHIEVEMENTS, DAILY_CHALLENGES, RING_CIRCUMFERENCE, POMODOROS_BEFORE_LONG_BREAK, AFFIRMATIONS, MOOD_OPTIONS } from './state.js';
+import { saveTaskQueue, saveSessionChain, saveRecurringTasks, saveTaskTemplates } from './storage.js';
 import { dom } from './dom.js';
 
 // --- Utilities ---
@@ -32,6 +33,7 @@ export function updateTopStats() {
   if (dom.xpValue) dom.xpValue.textContent = 'Lv.' + state.level;
   renderSessionTarget();
   renderFocusScore();
+  renderCognitiveLoad();
 }
 
 // --- Ring progress ---
@@ -80,7 +82,7 @@ export function renderHistory() {
       <div class="h-icon work">${catIcon}</div>
       <div class="h-details">
         <div class="h-task">${escapeHtml(entry.task || 'Untitled')}</div>
-        <div class="h-meta">${entry.duration}m · ${entry.displayTime || ''}${entry.distractions ? ` · ${entry.distractions} dist.` : ''}${entry.note ? ` · "${escapeHtml(entry.note)}"` : ''}</div>
+        <div class="h-meta">${entry.duration}m${entry.overtime ? ` +${Math.round(entry.overtime / 60)}m OT` : ''} · ${entry.displayTime || ''}${entry.mood ? ` · ${MOOD_OPTIONS.find(m=>m.value===entry.mood)?.emoji||''}` : ''}${entry.complexity ? ` · ${'★'.repeat(entry.complexity)}` : ''}${entry.distractions ? ` · ${entry.distractions} dist.` : ''}${entry.note ? ` · "${escapeHtml(entry.note)}"` : ''}</div>
       </div>
       <span class="h-rating ${ratingClass}">${entry.rating}</span>
     </div>`;
@@ -178,6 +180,11 @@ export function renderStats() {
   renderDayOfWeekChart();
   renderTaskHistory();
   renderFocusScore();
+  renderFocusZone();
+  renderMoodDistribution();
+  renderComplexityFocusChart();
+  renderCognitiveLoad();
+  renderFocusSuggestion();
 }
 
 // --- Calendar heatmap (last 35 days) ---
@@ -274,21 +281,92 @@ export function renderTaskQueue() {
   const list = document.getElementById('task-queue-list');
   const progress = document.getElementById('task-progress');
   if (!list) return;
-  if (state.taskQueue.length === 0) {
+
+  // Filter based on archive state (#40)
+  const showArchived = state.showArchived;
+  const visibleTasks = showArchived ? state.taskQueue : state.taskQueue.filter(t => !t.archived);
+
+  if (visibleTasks.length === 0) {
     list.innerHTML = '<div class="tasks-empty">No tasks yet. Add one above!</div>';
     if (progress) progress.textContent = '';
     return;
   }
   const done = state.taskQueue.filter(t => t.done).length;
   if (progress) progress.textContent = `Completed: ${done}/${state.taskQueue.length}`;
-  list.innerHTML = state.taskQueue.map(task => `
-    <div class="task-item${task.done ? ' done' : ''}" data-id="${task.id}">
+
+  list.innerHTML = visibleTasks.map(task => {
+    // Estimate progress (#34)
+    const estimateHtml = task.estimate > 0
+      ? `<span class="task-estimate">${task.pomodorosCompleted || 0}/${task.estimate} poms</span>`
+      : '';
+    // Subtasks (#35)
+    const subtasks = task.subtasks || [];
+    const subtaskHtml = subtasks.length > 0 ? `
+      <div class="subtask-list">
+        ${subtasks.map((st, i) => `
+          <label class="subtask-item" data-task-id="${task.id}" data-subtask-idx="${i}">
+            <input type="checkbox" class="subtask-check" ${st.done ? 'checked' : ''}>
+            <span class="${st.done ? 'done-text' : ''}">${escapeHtml(st.text)}</span>
+          </label>`).join('')}
+        <div class="subtask-progress-bar"><div class="subtask-progress-fill" style="width:${subtasks.length > 0 ? (subtasks.filter(s=>s.done).length/subtasks.length*100) : 0}%"></div></div>
+      </div>` : '';
+    const archivedClass = task.archived ? ' archived' : '';
+    return `
+    <div class="task-item${task.done ? ' done' : ''}${archivedClass}" data-id="${task.id}" draggable="true">
+      <div class="drag-handle" title="Drag to reorder">⠿</div>
       <div class="task-item-check${task.done ? ' checked' : ''}">${task.done ? '✓' : ''}</div>
       <div class="priority-dot ${task.priority}"></div>
-      <div class="task-item-name${task.done ? ' done-text' : ''}">${escapeHtml(task.name)}</div>
-      <button class="btn-focus-task" title="Focus on this task">▶ Focus</button>
-      <button class="btn-delete-task" title="Delete" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;padding:4px;">✕</button>
-    </div>`).join('');
+      <div class="task-item-body">
+        <div class="task-item-name${task.done ? ' done-text' : ''}">${escapeHtml(task.name)} ${estimateHtml}</div>
+        ${subtaskHtml}
+      </div>
+      <div class="task-item-actions">
+        <button class="btn-focus-task" title="Focus on this task">▶</button>
+        <button class="btn-add-subtask" title="Add subtask">+</button>
+        ${task.done && !task.archived ? '<button class="btn-archive-task" title="Archive">📦</button>' : ''}
+        <button class="btn-delete-task" title="Delete" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;padding:4px;">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Set up drag and drop (#42)
+  setupDragAndDrop(list);
+}
+
+function setupDragAndDrop(list) {
+  let draggedId = null;
+  list.querySelectorAll('.task-item[draggable]').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      draggedId = parseInt(item.dataset.id, 10);
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      draggedId = null;
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over');
+    });
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      const targetId = parseInt(item.dataset.id, 10);
+      if (draggedId === null || draggedId === targetId) return;
+      const fromIdx = state.taskQueue.findIndex(t => t.id === draggedId);
+      const toIdx = state.taskQueue.findIndex(t => t.id === targetId);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const [moved] = state.taskQueue.splice(fromIdx, 1);
+      state.taskQueue.splice(toIdx, 0, moved);
+      saveTaskQueue();
+      renderTaskQueue();
+    });
+  });
 }
 
 // --- Toast ---
@@ -583,4 +661,276 @@ export function renderTaskHistory() {
       <div class="task-hist-bar-track"><div class="task-hist-bar" style="width:${(mins / maxMins) * 100}%"></div></div>
       <div class="task-hist-mins">${Math.round(mins)}m</div>
     </div>`).join('');
+}
+
+// --- Focus Zone Detection (#19) ---
+
+export function renderFocusZone() {
+  const el = document.getElementById('focus-zone-display');
+  if (!el) return;
+  if (state.sessionHistory.length < 5) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Need 5+ sessions for analysis</p>';
+    return;
+  }
+  const ratingVal = { Distracted: 1, Okay: 2, Focused: 3, Flow: 4 };
+  const hourRatings = {};
+  const hourCounts = {};
+  state.sessionHistory.forEach(s => {
+    try {
+      const h = new Date(s.timestamp).getHours();
+      hourRatings[h] = (hourRatings[h] || 0) + (ratingVal[s.rating] || 0);
+      hourCounts[h] = (hourCounts[h] || 0) + 1;
+    } catch {}
+  });
+  let bestHour = -1, bestAvg = 0;
+  Object.keys(hourCounts).forEach(h => {
+    const avg = hourRatings[h] / hourCounts[h];
+    if (avg > bestAvg) { bestAvg = avg; bestHour = parseInt(h); }
+  });
+  if (bestHour < 0) { el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Not enough data</p>'; return; }
+  const formatHour = h => { const ampm = h >= 12 ? 'pm' : 'am'; return `${h % 12 || 12}${ampm}`; };
+  el.innerHTML = `<div style="font-size:1.1rem;font-weight:700;color:var(--accent-work);">🎯 Your Focus Zone: ${formatHour(bestHour)} - ${formatHour((bestHour + 1) % 24)}</div>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Avg rating: ${bestAvg.toFixed(1)}/4 across ${hourCounts[bestHour]} sessions</p>`;
+}
+
+// --- Mood Distribution (#21) ---
+
+export function renderMoodDistribution() {
+  const el = document.getElementById('mood-distribution');
+  if (!el) return;
+  const moodCounts = {};
+  state.sessionHistory.forEach(s => {
+    if (s.mood) moodCounts[s.mood] = (moodCounts[s.mood] || 0) + 1;
+  });
+  const total = Object.values(moodCounts).reduce((a, b) => a + b, 0);
+  if (total === 0) { el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">No mood data yet. Select a mood before starting sessions.</p>'; return; }
+  el.innerHTML = MOOD_OPTIONS.map(m => {
+    const count = moodCounts[m.value] || 0;
+    const pct = total > 0 ? (count / total * 100) : 0;
+    return `<div class="dur-dist-item">
+      <div class="dur-dist-label">${m.emoji} ${m.label}</div>
+      <div class="dur-dist-track"><div class="dur-dist-bar" style="width:${pct}%"></div></div>
+      <div class="dur-dist-count">${count}</div>
+    </div>`;
+  }).join('');
+}
+
+// --- Complexity vs Focus Chart (#28) ---
+
+export function renderComplexityFocusChart() {
+  const el = document.getElementById('complexity-focus-chart');
+  if (!el) return;
+  const ratingVal = { Distracted: 1, Okay: 2, Focused: 3, Flow: 4 };
+  const compData = {};
+  const compCounts = {};
+  state.sessionHistory.forEach(s => {
+    if (s.complexity && s.complexity > 0) {
+      compData[s.complexity] = (compData[s.complexity] || 0) + (ratingVal[s.rating] || 0);
+      compCounts[s.complexity] = (compCounts[s.complexity] || 0) + 1;
+    }
+  });
+  const total = Object.values(compCounts).reduce((a, b) => a + b, 0);
+  if (total < 3) { el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Rate task complexity before sessions for analysis</p>'; return; }
+  const maxAvg = 4;
+  el.innerHTML = [1,2,3,4,5].map(c => {
+    const avg = compCounts[c] ? compData[c] / compCounts[c] : 0;
+    const pct = (avg / maxAvg) * 100;
+    return `<div class="dur-dist-item">
+      <div class="dur-dist-label">${'★'.repeat(c)}</div>
+      <div class="dur-dist-track"><div class="dur-dist-bar" style="width:${pct}%"></div></div>
+      <div class="dur-dist-count">${avg.toFixed(1)}</div>
+    </div>`;
+  }).join('');
+}
+
+// --- Cognitive Load Indicator (#29) ---
+
+export function renderCognitiveLoad() {
+  const el = dom.cognitiveLoadValue;
+  if (!el) return;
+  const today = new Date().toDateString();
+  const todaySessions = state.sessionHistory.filter(s => s.date === today);
+  let load = 0;
+  todaySessions.forEach(s => {
+    const complexity = s.complexity || 1;
+    load += complexity * s.duration;
+  });
+  let level, color;
+  if (load < 60)       { level = 'Low';      color = 'var(--accent-success)'; }
+  else if (load < 150) { level = 'Medium';   color = 'var(--accent-okay)'; }
+  else if (load < 300) { level = 'High';     color = 'var(--accent-warning)'; }
+  else                 { level = 'Overload'; color = 'var(--accent-danger)'; }
+  el.textContent = level;
+  el.style.color = color;
+}
+
+// --- Focus Improvement Suggestions (#30) ---
+
+export function renderFocusSuggestion() {
+  const el = document.getElementById('focus-suggestion');
+  if (!el) return;
+  const today = new Date().toDateString();
+  if (state.lastSuggestionDate === today && el.dataset.filled) return; // Only 1 per day
+
+  if (state.sessionHistory.length < 5) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Complete more sessions for insights</p>';
+    return;
+  }
+
+  const suggestions = [];
+  const ratingVal = { Distracted: 1, Okay: 2, Focused: 3, Flow: 4 };
+
+  // Check morning vs afternoon
+  const morningRatings = [], afternoonRatings = [];
+  state.sessionHistory.forEach(s => {
+    try {
+      const h = new Date(s.timestamp).getHours();
+      const val = ratingVal[s.rating] || 0;
+      if (h < 12) morningRatings.push(val);
+      else afternoonRatings.push(val);
+    } catch {}
+  });
+  if (morningRatings.length >= 3 && afternoonRatings.length >= 3) {
+    const morningAvg = morningRatings.reduce((a,b) => a+b, 0) / morningRatings.length;
+    const afternoonAvg = afternoonRatings.reduce((a,b) => a+b, 0) / afternoonRatings.length;
+    if (morningAvg > afternoonAvg + 0.5) {
+      suggestions.push('📌 Your morning sessions rate higher. Try scheduling hard tasks before noon.');
+    } else if (afternoonAvg > morningAvg + 0.5) {
+      suggestions.push('📌 You focus better in the afternoon. Save challenging work for after lunch.');
+    }
+  }
+
+  // Check distraction correlation
+  const highDist = state.sessionHistory.filter(s => (s.distractions || 0) >= 3);
+  const lowDist = state.sessionHistory.filter(s => (s.distractions || 0) === 0);
+  if (highDist.length >= 3 && lowDist.length >= 3) {
+    const highAvg = highDist.reduce((a,s) => a + (ratingVal[s.rating]||0), 0) / highDist.length;
+    const lowAvg = lowDist.reduce((a,s) => a + (ratingVal[s.rating]||0), 0) / lowDist.length;
+    if (lowAvg > highAvg + 0.5) {
+      suggestions.push('📌 Zero-distraction sessions rate much higher. Try distraction-free mode more often.');
+    }
+  }
+
+  // Check short vs long sessions
+  const shortSessions = state.sessionHistory.filter(s => s.duration < 15);
+  const longSessions = state.sessionHistory.filter(s => s.duration >= 30);
+  if (shortSessions.length >= 3 && longSessions.length >= 3) {
+    const shortAvg = shortSessions.reduce((a,s) => a + (ratingVal[s.rating]||0), 0) / shortSessions.length;
+    const longAvg = longSessions.reduce((a,s) => a + (ratingVal[s.rating]||0), 0) / longSessions.length;
+    if (shortAvg > longAvg + 0.3) {
+      suggestions.push('📌 Shorter sessions seem to work better for you. Try the Sprint or Classic preset.');
+    } else if (longAvg > shortAvg + 0.3) {
+      suggestions.push('📌 You shine in longer sessions. Consider Deep Work mode for more flow states.');
+    }
+  }
+
+  // Check energy correlation
+  const energyHigh = state.sessionHistory.filter(s => s.energy === 'high');
+  const energyLow = state.sessionHistory.filter(s => s.energy === 'low');
+  if (energyHigh.length >= 2 && energyLow.length >= 2) {
+    const highAvg = energyHigh.reduce((a,s) => a + (ratingVal[s.rating]||0), 0) / energyHigh.length;
+    const lowAvg = energyLow.reduce((a,s) => a + (ratingVal[s.rating]||0), 0) / energyLow.length;
+    if (highAvg > lowAvg + 0.7) {
+      suggestions.push('📌 High-energy sessions perform much better. Track and optimize your energy levels.');
+    }
+  }
+
+  if (suggestions.length === 0) {
+    suggestions.push('📌 Keep completing sessions! More data will unlock personalized suggestions.');
+  }
+
+  const suggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+  el.innerHTML = `<p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;">${suggestion}</p>`;
+  el.dataset.filled = 'true';
+  state.lastSuggestionDate = today;
+  localStorage.setItem('pp_lastSuggestionDate', today);
+}
+
+// --- Session Chain Render (#11) ---
+
+export function renderSessionChain() {
+  const list = dom.chainList;
+  if (!list) return;
+  if (state.sessionChain.length === 0) {
+    list.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:8px 0;">No entries in chain.</div>';
+    return;
+  }
+  list.innerHTML = state.sessionChain.map((entry, i) => {
+    const activeClass = i === state.chainIndex ? ' chain-active' : '';
+    const doneClass = entry.done ? ' chain-done' : '';
+    return `<div class="chain-entry${activeClass}${doneClass}" data-chain-idx="${i}">
+      <span class="chain-idx">${i + 1}</span>
+      <span class="chain-entry-dur">${entry.duration}m</span>
+      <span class="chain-entry-task">${escapeHtml(entry.task || 'Untitled')}</span>
+      ${entry.done ? '<span style="color:var(--accent-success);">✓</span>' : ''}
+      <button class="btn-delete-chain" data-chain-idx="${i}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;padding:2px 4px;">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// --- Recurring Tasks Render (#33) ---
+
+export function renderRecurringTasks() {
+  const list = dom.recurringTaskList;
+  if (!list) return;
+  if (state.recurringTasks.length === 0) {
+    list.innerHTML = '';
+    return;
+  }
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  list.innerHTML = state.recurringTasks.map(rt => {
+    const days = rt.days.map(d => dayNames[d]).join(', ');
+    return `<div class="recurring-item" data-recurring-id="${rt.id}">
+      <div class="recurring-item-name">${escapeHtml(rt.name)}</div>
+      <div class="recurring-item-days">${days}</div>
+      <button class="btn-delete-recurring" data-recurring-id="${rt.id}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;padding:2px 4px;">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// --- Task Templates Render (#39) ---
+
+export function renderTaskTemplates() {
+  const list = dom.templateList;
+  if (!list) return;
+  if (state.taskTemplates.length === 0) {
+    list.innerHTML = '<div class="tasks-empty">No templates saved yet.</div>';
+    return;
+  }
+  list.innerHTML = state.taskTemplates.map(t => `
+    <div class="template-item" data-template-id="${t.id}">
+      <div class="template-item-info">
+        <div class="template-item-name">${escapeHtml(t.name)}</div>
+        <div class="template-item-meta">${t.category ? t.category : ''} ${t.complexity ? '★'.repeat(t.complexity) : ''} ${t.estimate ? t.estimate + ' poms' : ''}</div>
+      </div>
+      <button class="btn-load-template" data-template-id="${t.id}" title="Load template">▶ Use</button>
+      <button class="btn-delete-template" data-template-id="${t.id}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;padding:2px 4px;">✕</button>
+    </div>`).join('');
+}
+
+// --- Spawn recurring tasks for today (#33) ---
+
+export function spawnRecurringTasks() {
+  const today = new Date().getDay();
+  const todayDateStr = new Date().toDateString();
+  state.recurringTasks.forEach(rt => {
+    if (!rt.days.includes(today)) return;
+    // Check if already spawned today
+    const alreadyExists = state.taskQueue.some(t => t.recurringSourceId === rt.id && t.spawnDate === todayDateStr);
+    if (alreadyExists) return;
+    const task = {
+      id: state.nextTaskId++,
+      name: rt.name,
+      priority: 'medium',
+      done: false,
+      archived: false,
+      estimate: 0,
+      pomodorosCompleted: 0,
+      subtasks: [],
+      recurringSourceId: rt.id,
+      spawnDate: todayDateStr,
+    };
+    state.taskQueue.push(task);
+  });
+  saveTaskQueue();
 }
