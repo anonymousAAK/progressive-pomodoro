@@ -61,6 +61,10 @@
         <span class="stat-value" id="xp-value">Lv.1</span>
         <span class="stat-label">Level</span>
       </div>
+      <div class="stat-chip cognitive">
+        <span class="stat-value" id="cognitive-load-value">Low</span>
+        <span class="stat-label">Cog. Load</span>
+      </div>
     </div>
 
     <!-- Navigation -->
@@ -116,6 +120,33 @@
             <button class="category-chip" data-cat="health">❤️ Health</button>
           </div>
 
+          <!-- Mood tracker (#21) -->
+          <div class="mood-row" id="mood-row">
+            <span class="mood-label">Mood:</span>
+            <button class="mood-btn" data-mood="happy">😊</button>
+            <button class="mood-btn" data-mood="neutral">😐</button>
+            <button class="mood-btn" data-mood="sad">😔</button>
+            <button class="mood-btn" data-mood="frustrated">😤</button>
+            <button class="mood-btn" data-mood="tired">😴</button>
+          </div>
+
+          <!-- Task complexity (#28) -->
+          <div class="complexity-row" id="complexity-row">
+            <span class="complexity-label">Complexity:</span>
+            <div class="complexity-stars" id="complexity-stars">
+              <button class="complexity-star" data-complexity="1">★</button>
+              <button class="complexity-star" data-complexity="2">★</button>
+              <button class="complexity-star" data-complexity="3">★</button>
+              <button class="complexity-star" data-complexity="4">★</button>
+              <button class="complexity-star" data-complexity="5">★</button>
+            </div>
+          </div>
+
+          <!-- Lockout badge (#9) -->
+          <div class="lockout-badge hidden" id="lockout-badge">
+            🔒 Focus Lockout: <span id="lockout-count">0</span> sessions remaining
+          </div>
+
           <!-- Circular timer ring -->
           <div class="timer-ring-wrapper">
             <svg viewBox="0 0 260 260">
@@ -149,6 +180,11 @@
           <!-- Focus score banner -->
           <div class="focus-score-banner" id="focus-score-banner">
             Today's focus score: <strong id="focus-score-value">—</strong>
+          </div>
+
+          <!-- Pause counter (#4) -->
+          <div class="pause-counter hidden" id="pause-counter">
+            Pauses remaining: <span id="pauses-remaining">0</span>
           </div>
 
           <!-- Timer controls -->
@@ -188,6 +224,10 @@
 
           <!-- Focus rating -->
           <div class="focus-rating hidden" id="focus-rating">
+            <!-- Reflection prompt (#25) -->
+            <div class="reflection-prompt" id="reflection-prompt">
+              <p class="reflection-question" id="reflection-question"></p>
+            </div>
             <p class="focus-rating-title">How was your focus?</p>
             <p class="focus-rating-subtitle">This adjusts your next work interval</p>
             <div class="focus-grid">
@@ -207,6 +247,26 @@
             <div class="session-note-wrapper">
               <textarea id="session-note-input" class="session-note-input" rows="2" maxlength="120"
                 placeholder="Quick note about this session… (optional)"></textarea>
+            </div>
+          </div>
+
+          <!-- Session chain (#11) -->
+          <div class="chain-section" id="chain-section">
+            <div class="chain-header">
+              <span class="chain-title">⛓ Session Chain</span>
+              <button class="btn-icon" id="chain-toggle-btn" title="Toggle chain">▾</button>
+            </div>
+            <div class="chain-body" id="chain-body">
+              <div class="chain-add-row">
+                <input type="number" id="chain-duration-input" class="setting-input" min="1" max="120" value="25" placeholder="min" style="width:60px;">
+                <input type="text" id="chain-task-input" class="task-input" placeholder="Task name…" maxlength="60" style="flex:1;text-align:left;">
+                <button class="btn btn-export" id="chain-add-btn">Add</button>
+              </div>
+              <div class="chain-list" id="chain-list"></div>
+              <div class="chain-controls" id="chain-controls">
+                <button class="btn btn-export" id="chain-start-btn">Start Chain</button>
+                <button class="btn btn-danger" id="chain-clear-btn">Clear</button>
+              </div>
             </div>
           </div>
 
@@ -323,6 +383,26 @@
           <div class="card-title">Longest Sessions</div>
           <div id="longest-sessions"><p style="color:var(--text-muted);font-size:0.85rem;">No data yet</p></div>
         </div>
+        <!-- Focus Zone Detection (#19) -->
+        <div class="card">
+          <div class="card-title">Focus Zone</div>
+          <div id="focus-zone-display"><p style="color:var(--text-muted);font-size:0.85rem;">Not enough data</p></div>
+        </div>
+        <!-- Mood Distribution (#21) -->
+        <div class="card">
+          <div class="card-title">Mood Distribution</div>
+          <div id="mood-distribution"></div>
+        </div>
+        <!-- Complexity vs Focus (#28) -->
+        <div class="card">
+          <div class="card-title">Complexity vs Focus</div>
+          <div id="complexity-focus-chart"></div>
+        </div>
+        <!-- Focus Improvement Suggestions (#30) -->
+        <div class="card">
+          <div class="card-title">Focus Insight</div>
+          <div id="focus-suggestion"><p style="color:var(--text-muted);font-size:0.85rem;">Complete more sessions for insights</p></div>
+        </div>
       </div>
 
       <!-- ===== TASKS PAGE ===== -->
@@ -341,13 +421,50 @@
               <button class="priority-chip active" data-priority="medium">Med</button>
               <button class="priority-chip" data-priority="high">High</button>
             </div>
+            <!-- Task time estimate (#34) -->
+            <div class="estimate-row">
+              <span class="priority-label">Est. Pomodoros:</span>
+              <input type="number" id="task-estimate-input" class="setting-input" min="0" max="20" value="0" style="width:60px;">
+            </div>
             <button class="btn btn-primary" id="add-task-btn">Add Task</button>
+            <button class="btn btn-export" id="save-template-btn" style="margin-top:6px;width:100%;">Save as Template</button>
+          </div>
+        </div>
+        <!-- Task templates (#39) -->
+        <div class="card">
+          <div class="card-title">Templates</div>
+          <div id="template-list" class="template-list">
+            <div class="tasks-empty">No templates saved yet.</div>
           </div>
         </div>
         <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div class="card-title" style="margin-bottom:0;">Tasks</div>
+            <label style="font-size:0.72rem;color:var(--text-muted);display:flex;align-items:center;gap:6px;cursor:pointer;">
+              Show Archived <input type="checkbox" id="show-archived-toggle">
+            </label>
+          </div>
           <div id="task-queue-list" class="task-queue-list">
             <div class="tasks-empty">No tasks yet. Add one above!</div>
           </div>
+        </div>
+        <!-- Recurring tasks (#33) -->
+        <div class="card">
+          <div class="card-title">Recurring Tasks</div>
+          <div class="add-recurring-form">
+            <input type="text" id="recurring-task-input" class="task-input" placeholder="Recurring task name…" maxlength="80" autocomplete="off">
+            <div class="recurring-days-row" id="recurring-days-row">
+              <label class="day-check"><input type="checkbox" data-day="0"><span>Sun</span></label>
+              <label class="day-check"><input type="checkbox" data-day="1"><span>Mon</span></label>
+              <label class="day-check"><input type="checkbox" data-day="2"><span>Tue</span></label>
+              <label class="day-check"><input type="checkbox" data-day="3"><span>Wed</span></label>
+              <label class="day-check"><input type="checkbox" data-day="4"><span>Thu</span></label>
+              <label class="day-check"><input type="checkbox" data-day="5"><span>Fri</span></label>
+              <label class="day-check"><input type="checkbox" data-day="6"><span>Sat</span></label>
+            </div>
+            <button class="btn btn-export" id="add-recurring-btn">Add Recurring</button>
+          </div>
+          <div id="recurring-task-list" class="recurring-task-list"></div>
         </div>
         <div class="card">
           <div class="card-title">Import Session Data</div>
@@ -387,6 +504,34 @@
             <div class="setting-row">
               <div><div class="setting-label">Count Up Mode</div><div class="setting-desc">Show elapsed time instead of countdown</div></div>
               <label class="toggle-switch"><input type="checkbox" id="count-up-toggle"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Warm-up Mode</div><div class="setting-desc">2-min warm-up before real timer starts</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="warmup-toggle"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Overtime Tracking</div><div class="setting-desc">Allow working past timer end</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="overtime-toggle"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Pause Limit</div><div class="setting-desc">Max pauses per session (-1 = unlimited)</div></div>
+              <input type="number" id="pause-limit-input" class="setting-input" min="-1" max="10" value="-1">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Focus Lockout</div><div class="setting-desc">Disable skip/pause for N sessions (0 = off)</div></div>
+              <input type="number" id="lockout-input" class="setting-input" min="0" max="20" value="0">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Min Session</div><div class="setting-desc">Sessions under N min don't count for stats</div></div>
+              <input type="number" id="min-session-input" class="setting-input" min="1" max="30" value="5">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Wind-down Mode</div><div class="setting-desc">Shorten sessions near end-of-day</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="winddown-toggle"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">End-of-Day Time</div><div class="setting-desc">When to start winding down</div></div>
+              <input type="time" id="winddown-time-input" class="setting-input" value="18:00" style="width:100px;">
             </div>
           </div>
           <div class="card">

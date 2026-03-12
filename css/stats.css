@@ -63,3 +63,27 @@
 .badge-info { min-width: 0; }
 .badge-name { font-size: 0.78rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .badge-desc { font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
+
+/* ===== Hourly chart bars ===== */
+.hourly-chart { display: flex; align-items: flex-end; justify-content: space-between; height: 80px; gap: 2px; padding: 8px 0; }
+.hourly-bar-wrapper { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
+.hourly-bar-track { width: 100%; max-width: 20px; flex: 1; background: rgba(255,255,255,0.03); border-radius: 3px; display: flex; align-items: flex-end; overflow: hidden; }
+.hourly-bar { width: 100%; background: var(--accent-work); border-radius: 3px; min-height: 0; transition: height 0.5s ease; }
+.hourly-label { font-size: 0.5rem; color: var(--text-muted); }
+
+/* ===== Duration distribution ===== */
+.dur-dist-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.dur-dist-label { font-size: 0.72rem; color: var(--text-secondary); min-width: 50px; }
+.dur-dist-track { flex: 1; height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+.dur-dist-bar { height: 100%; background: var(--accent-work); border-radius: 4px; transition: width 0.5s ease; }
+.dur-dist-count { font-size: 0.7rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; min-width: 24px; text-align: right; }
+
+/* ===== Task history ===== */
+.task-hist-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.task-hist-name { font-size: 0.75rem; color: var(--text-secondary); min-width: 80px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-hist-bar-track { flex: 1; height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+.task-hist-bar { height: 100%; background: linear-gradient(90deg, var(--accent-work), var(--accent-flow)); border-radius: 4px; transition: width 0.5s ease; }
+.task-hist-mins { font-size: 0.7rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; min-width: 30px; text-align: right; }
+
+/* ===== Cognitive load stat chip ===== */
+.stat-chip.cognitive .stat-value { font-size: 0.85rem; }

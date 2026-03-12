@@ -18,6 +18,10 @@ import {
   renderDailyChallenge,
   renderSessionDots,
   renderTaskQueue,
+  renderSessionChain,
+  renderRecurringTasks,
+  renderTaskTemplates,
+  spawnRecurringTasks,
 } from './render.js';
 import { registerAllEvents } from './events.js';
 import { setRatingBC } from './rating.js';
@@ -60,6 +64,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const affirmToggle = document.getElementById('affirmations-enabled');
   if (affirmToggle) affirmToggle.checked = state.affirmationsEnabled;
 
+  // New feature settings sync
+  if (dom.warmupToggle) dom.warmupToggle.checked = state.warmUpEnabled;
+  if (dom.overtimeToggle) dom.overtimeToggle.checked = state.overtimeEnabled;
+  if (dom.pauseLimitInput) dom.pauseLimitInput.value = state.pauseLimit;
+  if (dom.lockoutInput) dom.lockoutInput.value = state.lockoutSessions;
+  if (dom.minSessionInput) dom.minSessionInput.value = state.minSessionMinutes;
+  if (dom.winddownToggle) dom.winddownToggle.checked = state.windDownEnabled;
+  if (dom.winddownTimeInput) dom.winddownTimeInput.value = state.windDownTime;
+
   // Highlight active ambient button
   document.querySelectorAll('.ambient-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.ambient === state.currentAmbient);
@@ -83,16 +96,22 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSessionDots();
   renderDailyChallenge();
   renderTaskQueue();
+  renderSessionChain();
+  renderRecurringTasks();
+  renderTaskTemplates();
 
-  // 7. Resume ambient sound if user had one active
+  // 7. Spawn recurring tasks for today (#33)
+  spawnRecurringTasks();
+
+  // 8. Resume ambient sound if user had one active
   if (state.currentAmbient !== 'none') startAmbient(state.currentAmbient);
 
-  // 8. Request notification permission if needed
+  // 9. Request notification permission if needed
   if (state.notifEnabled && Notification.permission === 'default') {
     Notification.requestPermission();
   }
 
-  // 9. Register service worker for PWA
+  // 10. Register service worker for PWA
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
