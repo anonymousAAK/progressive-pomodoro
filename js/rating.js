@@ -5,6 +5,17 @@ import { saveHistory, saveStreak } from './storage.js';
 import { updateTopStats, renderHistory, renderWeeklyChart, renderStats, renderDailyChallenge, showToast, showMilestoneCelebration, checkFocusTrend } from './render.js';
 import { switchMode, startTimer } from './timer.js';
 import { updateStreak, checkAchievements } from './gamification.js';
+import {
+  getSessionMultiplier,
+  calculateCoins,
+  addCoins,
+  renderCoinBalance,
+  renderMultiplierBadge,
+  fireWebhook,
+  sendEnhancedNotification,
+  hapticFeedback,
+  announceToScreenReader,
+} from './features-batch5.js';
 
 // BroadcastChannel for multi-tab sync (shared via window)
 let _bc = null;
@@ -22,8 +33,11 @@ export function handleRating(rating) {
   updateStreak();
   saveStreak();
 
+  // #82 Session multiplier (calculate before saving session)
+  const multiplier = getSessionMultiplier();
+
   // Save session entry
-  state.sessionHistory.unshift({
+  const sessionEntry = {
     mode: 'Work',
     task:        state.currentTask || 'Untitled',
     category:    state.currentCategory,
@@ -36,18 +50,40 @@ export function handleRating(rating) {
     timestamp:   new Date().toISOString(),
     displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     date:        new Date().toDateString(),
-  });
+  };
+  state.sessionHistory.unshift(sessionEntry);
   saveHistory();
 
   // Notify other tabs
   if (_bc) _bc.postMessage({ type: 'session_saved' });
 
-  // XP + Level
-  const earned = calculateXP(durationMin, rating);
+  // #82 XP with multiplier
+  const baseXP = calculateXP(durationMin, rating);
+  const xpMultiplier = Math.min(multiplier, 5);
+  const earned = baseXP * xpMultiplier;
   state.xp += earned;
   state.level = Math.floor(state.xp / 250) + 1;
   localStorage.setItem('pp_xp', state.xp);
-  setTimeout(() => showToast(`+${earned} XP`), 100);
+  const multText = xpMultiplier > 1 ? ` (x${xpMultiplier})` : '';
+  setTimeout(() => showToast(`+${earned} XP${multText}`), 100);
+
+  // #84 Focus Coins
+  const coinsEarned = calculateCoins(durationMin, sessionEntry.rating);
+  addCoins(coinsEarned);
+  setTimeout(() => showToast(`+${coinsEarned} coins`), 600);
+
+  // #82 Update multiplier badge
+  renderMultiplierBadge();
+  renderCoinBalance();
+
+  // #109 Webhook
+  fireWebhook(sessionEntry);
+
+  // #101 Haptic feedback on session end
+  hapticFeedback('timer-end');
+
+  // #94 Screen reader announcement
+  announceToScreenReader(`Session complete. Rating: ${rating}. Earned ${earned} XP and ${coinsEarned} coins.`);
 
   // Milestone check
   if (MILESTONES.has(state.sessionHistory.length)) {

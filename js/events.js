@@ -7,18 +7,47 @@ import { startTimer, pauseTimer, resetTimer, switchMode } from './timer.js';
 import { handleRating } from './rating.js';
 import { getFocusTip } from './tips.js';
 import { renderHistory, renderWeeklyChart, renderStats, updateTopStats, showToast, renderTaskQueue } from './render.js';
+import {
+  applyHighContrast,
+  applyColorblindPalette,
+  toggleVoiceControl,
+  setHapticEnabled,
+  hapticFeedback,
+  applyPerformanceMode,
+  toggleWidgetMode,
+  shareDailySummary,
+  shareWeeklyDigest,
+  shareAchievement,
+  generateChallengeString,
+  decodeChallengeString,
+  renderChallengeComparison,
+  generateICalFile,
+  setWebhookUrl,
+  applyUnlockableTheme,
+  renderUnlockableThemes,
+  renderWeeklyMissions,
+  renderFocusGarden,
+  renderProgressTimeline,
+  announceToScreenReader,
+} from './features-batch5.js';
+import { i18n } from './i18n.js';
 
 export function registerAllEvents() {
   // --- Start / Pause ---
   dom.startPauseBtn.addEventListener('click', () => {
+    hapticFeedback('click');
     if (state.timerInterval) pauseTimer(); else startTimer();
   });
 
   // --- Stop (Reset) ---
-  dom.stopBtn.addEventListener('click', resetTimer);
+  dom.stopBtn.addEventListener('click', () => {
+    hapticFeedback('click');
+    resetTimer();
+  });
 
   // --- Skip ---
   dom.skipBtn.addEventListener('click', () => {
+    hapticFeedback('click');
     if (state.currentMode === 'work') {
       resetTimer();
     } else {
@@ -29,6 +58,7 @@ export function registerAllEvents() {
 
   // --- Skip break ---
   dom.skipBreakBtn.addEventListener('click', () => {
+    hapticFeedback('click');
     switchMode('work');
     startTimer();
   });
@@ -36,7 +66,7 @@ export function registerAllEvents() {
   // --- Focus rating ---
   dom.focusRating.addEventListener('click', e => {
     const btn = e.target.closest('[data-rating]');
-    if (btn) { playSound('click'); handleRating(btn.dataset.rating); }
+    if (btn) { playSound('click'); hapticFeedback('click'); handleRating(btn.dataset.rating); }
   });
 
   // --- Timer presets ---
@@ -45,6 +75,7 @@ export function registerAllEvents() {
       const preset = TIMER_PRESETS[btn.dataset.preset];
       if (!preset) return;
       playSound('click');
+      hapticFeedback('click');
       state.workDuration      = preset.work      * 60;
       state.breakDuration     = preset.breakDur  * 60;
       state.intervalAdjust    = preset.adjust    * 60;
@@ -65,6 +96,7 @@ export function registerAllEvents() {
   dom.categoryChips.forEach(chip => {
     chip.addEventListener('click', () => {
       playSound('click');
+      hapticFeedback('click');
       const cat = chip.dataset.cat;
       const isActive = chip.classList.contains('active');
       dom.categoryChips.forEach(c => c.classList.remove('active'));
@@ -97,7 +129,13 @@ export function registerAllEvents() {
       dom.pages.forEach(page => page.classList.toggle('active', page.id === targetId));
       playSound('click');
       if (targetId === 'history-page') { renderHistory(); renderWeeklyChart(); }
-      if (targetId === 'stats-page')   renderStats();
+      if (targetId === 'stats-page') {
+        renderStats();
+        // Batch 5 stats renders
+        renderWeeklyMissions();
+        renderFocusGarden();
+        renderProgressTimeline();
+      }
     });
   });
 
@@ -112,6 +150,13 @@ export function registerAllEvents() {
     state.autoBreak         = dom.autoBreak.checked;
     state.autoWork          = dom.autoWork.checked;
     if (state.notifEnabled && Notification.permission === 'default') Notification.requestPermission();
+
+    // Save webhook URL (#109)
+    const webhookInput = document.getElementById('webhook-url-input');
+    if (webhookInput) setWebhookUrl(webhookInput.value.trim());
+    const webhookEnabled = document.getElementById('webhook-enabled-toggle');
+    if (webhookEnabled) localStorage.setItem('pp_webhookEnabled', webhookEnabled.checked);
+
     saveSettings();
     resetTimer();
     showToast('Settings saved!');
@@ -332,24 +377,166 @@ export function registerAllEvents() {
   }
 
   // --- Navigation (update to include tasks page) ---
-  // Navigation is already registered above, but we need renderTaskQueue on tasks tab
-  // Re-check nav handler — patch it here for tasks-page
   dom.navBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       if (btn.dataset.target === 'tasks-page') renderTaskQueue();
     });
   });
 
-  // --- Keyboard shortcuts ---
+  // --- Keyboard shortcuts (#97 enhanced) ---
   document.addEventListener('keydown', e => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.code === 'Space') {
       e.preventDefault();
-      if (state.timerInterval) pauseTimer(); else startTimer();
+      if (state.timerInterval) {
+        pauseTimer();
+        announceToScreenReader('Timer paused');
+      } else {
+        startTimer();
+        announceToScreenReader('Timer started');
+      }
     } else if (e.key === 'r' || e.key === 'R') {
       resetTimer();
+      announceToScreenReader('Timer reset');
     } else if (e.key === 's' || e.key === 'S') {
       if (state.currentMode !== 'work') { switchMode('work'); startTimer(); }
+      announceToScreenReader('Skipped to work');
     }
   });
+
+  // ====================================================================
+  // Batch 5 Event Listeners
+  // ====================================================================
+
+  // --- #95 High Contrast ---
+  const highContrastToggle = document.getElementById('high-contrast-toggle');
+  if (highContrastToggle) {
+    highContrastToggle.addEventListener('change', e => {
+      applyHighContrast(e.target.checked);
+    });
+  }
+
+  // --- #99 Colorblind Palette ---
+  document.querySelectorAll('.cb-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cb-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyColorblindPalette(btn.dataset.cb);
+    });
+  });
+
+  // --- #100 Voice Control ---
+  const voiceToggleBtn = document.getElementById('voice-toggle-btn');
+  if (voiceToggleBtn) {
+    voiceToggleBtn.addEventListener('click', () => {
+      const isActive = voiceToggleBtn.classList.toggle('active');
+      toggleVoiceControl(isActive);
+    });
+  }
+  const voiceSettingToggle = document.getElementById('voice-control-toggle');
+  if (voiceSettingToggle) {
+    voiceSettingToggle.addEventListener('change', e => {
+      toggleVoiceControl(e.target.checked);
+      const voiceBtn = document.getElementById('voice-toggle-btn');
+      if (voiceBtn) voiceBtn.classList.toggle('active', e.target.checked);
+    });
+  }
+
+  // --- #101 Haptic Feedback ---
+  const hapticToggle = document.getElementById('haptic-toggle');
+  if (hapticToggle) {
+    hapticToggle.addEventListener('change', e => {
+      setHapticEnabled(e.target.checked);
+    });
+  }
+
+  // --- #104 Language Select ---
+  const langSelect = document.getElementById('language-select');
+  if (langSelect) {
+    langSelect.addEventListener('change', e => {
+      i18n.setLang(e.target.value);
+      showToast(`Language: ${e.target.value === 'es' ? 'Español' : 'English'}`);
+    });
+  }
+
+  // --- #109 Webhook ---
+  // Saved via the save settings button above
+
+  // --- #114 iCal ---
+  const icalBtn = document.getElementById('ical-download-btn');
+  if (icalBtn) {
+    icalBtn.addEventListener('click', generateICalFile);
+  }
+
+  // --- #119 Widget Mode ---
+  const widgetBtn = document.getElementById('widget-toggle-btn');
+  if (widgetBtn) {
+    widgetBtn.addEventListener('click', () => {
+      const active = toggleWidgetMode();
+      widgetBtn.classList.toggle('active', active);
+    });
+  }
+
+  // --- #121 Performance Mode ---
+  const perfToggle = document.getElementById('performance-mode-toggle');
+  if (perfToggle) {
+    perfToggle.addEventListener('change', e => {
+      applyPerformanceMode(e.target.checked);
+    });
+  }
+
+  // --- #83 Unlockable themes ---
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-unlock-theme]');
+    if (!btn || btn.disabled) return;
+    applyUnlockableTheme(btn.dataset.unlockTheme);
+  });
+
+  // --- #86 Share Daily Summary ---
+  const shareDailyBtn = document.getElementById('share-daily-btn');
+  if (shareDailyBtn) {
+    shareDailyBtn.addEventListener('click', shareDailySummary);
+  }
+
+  // --- #92 Share Weekly Digest ---
+  const shareWeeklyBtn = document.getElementById('share-weekly-btn');
+  if (shareWeeklyBtn) {
+    shareWeeklyBtn.addEventListener('click', shareWeeklyDigest);
+  }
+
+  // --- #87 Share Achievement (delegated on achievements grid) ---
+  const achGrid = document.getElementById('achievements-grid');
+  if (achGrid) {
+    achGrid.addEventListener('click', e => {
+      const shareBtn = e.target.closest('.badge-share-btn');
+      if (shareBtn) {
+        shareAchievement(shareBtn.dataset.achId);
+      }
+    });
+  }
+
+  // --- #88 Focus Challenge ---
+  const copyChallengeBtn = document.getElementById('copy-challenge-btn');
+  if (copyChallengeBtn) {
+    copyChallengeBtn.addEventListener('click', () => {
+      const challengeStr = generateChallengeString();
+      navigator.clipboard.writeText(challengeStr).then(() => {
+        showToast('Challenge copied to clipboard!');
+      }).catch(() => {
+        // Fallback
+        showToast('Challenge: ' + challengeStr.slice(0, 20) + '...');
+      });
+    });
+  }
+
+  const compareChallengeBtn = document.getElementById('compare-challenge-btn');
+  if (compareChallengeBtn) {
+    compareChallengeBtn.addEventListener('click', () => {
+      const input = document.getElementById('paste-challenge-input');
+      if (!input || !input.value.trim()) { showToast('Paste a challenge first'); return; }
+      const theirData = decodeChallengeString(input.value.trim());
+      if (!theirData) { showToast('Invalid challenge string'); return; }
+      renderChallengeComparison(theirData);
+    });
+  }
 }

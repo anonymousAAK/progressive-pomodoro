@@ -2,6 +2,7 @@ import { state, POMODOROS_BEFORE_LONG_BREAK, BREAK_ACTIVITIES } from './state.js
 import { dom } from './dom.js';
 import { playSound } from './audio.js';
 import { updateTimerDisplay, updateNextInfo, renderSessionDots, showCelebration, showToast, showAffirmation } from './render.js';
+import { sendEnhancedNotification, hapticFeedback, announceToScreenReader } from './features-batch5.js';
 
 // Injected from rating.js to avoid circular deps
 let _onWorkComplete = null;
@@ -190,15 +191,21 @@ export function switchMode(mode) {
 function _onTimerComplete() {
   if (state.currentMode === 'work') {
     playSound('work-end');
-    sendNotification('Work session complete!', 'Time to rate your focus.', [{ label: 'Start Break', action: 'break' }]);
+    hapticFeedback('timer-end');
+    // #118 Enhanced notifications with actions
+    sendEnhancedNotification('work-end');
     dom.timerControls.classList.add('hidden');
     if (dom.distractionWrapper) dom.distractionWrapper.classList.add('hidden');
     dom.focusRating.classList.remove('hidden');
     showCelebration();
+    announceToScreenReader('Work session complete. Please rate your focus.');
     if (_onWorkComplete) _onWorkComplete();
   } else {
     playSound('break-end');
-    sendNotification('Break is over!', 'Ready for another work session?');
+    hapticFeedback('timer-end');
+    // #118 Enhanced notifications with actions
+    sendEnhancedNotification('break-end');
+    announceToScreenReader('Break is over. Ready for work.');
     switchMode('work');
     if (state.autoWork) startTimer();
     if (_onBreakComplete) _onBreakComplete();

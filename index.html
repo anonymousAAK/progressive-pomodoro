@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-accent="indigo">
+<html lang="en" dir="ltr" data-accent="indigo">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/history.css">
   <link rel="stylesheet" href="css/stats.css">
   <link rel="stylesheet" href="css/settings.css">
+  <link rel="stylesheet" href="css/batch5.css">
 </head>
 <body>
 
@@ -34,17 +35,19 @@
   <div id="app">
 
     <!-- Header -->
-    <header class="app-header">
+    <header class="app-header" role="banner">
       <h1>Progressive Pomodoro</h1>
       <p class="subtitle">Adapt. Focus. Flow.</p>
       <div class="header-actions">
-        <button id="theme-toggle-btn" class="btn-icon" title="Toggle light/dark">☀️</button>
-        <button id="focus-mode-btn" class="btn-icon" title="Distraction-free mode">⛶</button>
+        <button id="voice-toggle-btn" class="btn-icon" title="Toggle voice control" aria-label="Toggle voice control">🎤</button>
+        <button id="widget-toggle-btn" class="btn-icon" title="Toggle widget mode" aria-label="Toggle mini widget">📌</button>
+        <button id="theme-toggle-btn" class="btn-icon" title="Toggle light/dark" aria-label="Toggle light or dark theme">☀️</button>
+        <button id="focus-mode-btn" class="btn-icon" title="Distraction-free mode" aria-label="Toggle distraction-free mode">⛶</button>
       </div>
     </header>
 
     <!-- Top stats bar -->
-    <div class="stats-bar">
+    <div class="stats-bar" role="status" aria-label="Focus statistics summary">
       <div class="stat-chip streak">
         <span class="stat-value" id="streak-value">0</span>
         <span class="stat-label">Day Streak</span>
@@ -61,18 +64,24 @@
         <span class="stat-value" id="xp-value">Lv.1</span>
         <span class="stat-label">Level</span>
       </div>
+      <div class="stat-chip coins" aria-label="Focus coins balance">
+        <span class="stat-value" id="coin-value" style="color:#f59e0b;">0</span>
+        <span class="stat-label">🪙 Coins</span>
+      </div>
     </div>
+    <!-- Multiplier badge (#82) -->
+    <div id="multiplier-badge" class="multiplier-badge hidden" aria-live="polite"></div>
 
     <!-- Navigation -->
-    <nav class="nav">
-      <button data-target="timer-page"   class="nav-btn active">Timer</button>
-      <button data-target="history-page" class="nav-btn">History</button>
-      <button data-target="stats-page"   class="nav-btn">Stats</button>
-      <button data-target="tasks-page"   class="nav-btn">Tasks</button>
-      <button data-target="settings-page"class="nav-btn">Settings</button>
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+      <button data-target="timer-page"   class="nav-btn active" tabindex="1" aria-label="Navigate to Timer">Timer</button>
+      <button data-target="history-page" class="nav-btn" tabindex="2" aria-label="Navigate to History">History</button>
+      <button data-target="stats-page"   class="nav-btn" tabindex="3" aria-label="Navigate to Stats">Stats</button>
+      <button data-target="tasks-page"   class="nav-btn" tabindex="4" aria-label="Navigate to Tasks">Tasks</button>
+      <button data-target="settings-page"class="nav-btn" tabindex="5" aria-label="Navigate to Settings">Settings</button>
     </nav>
 
-    <main>
+    <main role="main">
 
       <!-- ===== TIMER PAGE ===== -->
       <div id="timer-page" class="page active">
@@ -152,10 +161,10 @@
           </div>
 
           <!-- Timer controls -->
-          <div class="timer-controls" id="timer-controls">
-            <button class="btn btn-secondary" id="stop-btn" title="Reset (R)">⏹</button>
-            <button class="btn btn-primary"   id="start-pause-btn" title="Start/Pause (Space)">Start</button>
-            <button class="btn btn-secondary" id="skip-btn" title="Skip (S)">⏭</button>
+          <div class="timer-controls" id="timer-controls" role="group" aria-label="Timer controls">
+            <button class="btn btn-secondary" id="stop-btn" title="Reset (R)" aria-label="Reset timer" tabindex="8">⏹</button>
+            <button class="btn btn-primary"   id="start-pause-btn" title="Start/Pause (Space)" aria-label="Start or pause timer" tabindex="6">Start</button>
+            <button class="btn btn-secondary" id="skip-btn" title="Skip (S)" aria-label="Skip current phase" tabindex="7">⏭</button>
           </div>
 
           <!-- Skip break -->
@@ -190,17 +199,17 @@
           <div class="focus-rating hidden" id="focus-rating">
             <p class="focus-rating-title">How was your focus?</p>
             <p class="focus-rating-subtitle">This adjusts your next work interval</p>
-            <div class="focus-grid">
-              <button data-rating="distracted" class="focus-btn focus-btn-distracted">
+            <div class="focus-grid" role="group" aria-label="Focus rating options">
+              <button data-rating="distracted" class="focus-btn focus-btn-distracted" aria-label="Rate focus as Distracted, decreases interval">
                 <span class="focus-emoji">😵‍💫</span>Distracted<span class="focus-effect">−interval</span>
               </button>
-              <button data-rating="okay" class="focus-btn focus-btn-okay">
+              <button data-rating="okay" class="focus-btn focus-btn-okay" aria-label="Rate focus as Okay, no change">
                 <span class="focus-emoji">😐</span>Okay<span class="focus-effect">no change</span>
               </button>
-              <button data-rating="focused" class="focus-btn focus-btn-focused">
+              <button data-rating="focused" class="focus-btn focus-btn-focused" aria-label="Rate focus as Focused, increases interval">
                 <span class="focus-emoji">🎯</span>Focused<span class="focus-effect">+interval</span>
               </button>
-              <button data-rating="flow" class="focus-btn focus-btn-flow">
+              <button data-rating="flow" class="focus-btn focus-btn-flow" aria-label="Rate focus as Flow State, doubles interval increase">
                 <span class="focus-emoji">🚀</span>Flow State<span class="focus-effect">+2× interval</span>
               </button>
             </div>
@@ -322,6 +331,41 @@
         <div class="card">
           <div class="card-title">Longest Sessions</div>
           <div id="longest-sessions"><p style="color:var(--text-muted);font-size:0.85rem;">No data yet</p></div>
+        </div>
+        <!-- #77 Weekly Missions -->
+        <div class="card">
+          <div class="card-title">Weekly Missions</div>
+          <div id="missions-grid" class="missions-grid"></div>
+        </div>
+        <!-- #78 Focus Garden -->
+        <div class="card">
+          <div class="card-title">Focus Garden</div>
+          <div id="focus-garden-grid" class="focus-garden-grid"></div>
+        </div>
+        <!-- #85 Progress Timeline -->
+        <div class="card">
+          <div class="card-title">Progress Timeline</div>
+          <div id="progress-timeline" class="progress-timeline"></div>
+        </div>
+        <!-- #86,92 Sharing -->
+        <div class="card">
+          <div class="card-title">Share</div>
+          <div class="share-buttons-row">
+            <button class="btn btn-export" id="share-daily-btn" aria-label="Share daily summary as PNG">Share Today</button>
+            <button class="btn btn-export" id="share-weekly-btn" aria-label="Share weekly digest as PNG">Share Week</button>
+          </div>
+        </div>
+        <!-- #88 Focus Challenge -->
+        <div class="card">
+          <div class="card-title">Focus Challenge</div>
+          <div class="challenge-link-row">
+            <button class="btn btn-export" id="copy-challenge-btn" aria-label="Copy your focus challenge to clipboard">Copy Challenge</button>
+          </div>
+          <div class="challenge-paste-row" style="margin-top:10px;">
+            <input type="text" id="paste-challenge-input" class="task-input" placeholder="Paste a friend's challenge here…" aria-label="Paste challenge string" style="font-size:0.78rem;">
+            <button class="btn btn-secondary-action" id="compare-challenge-btn" style="margin-top:6px;">Compare</button>
+          </div>
+          <div id="challenge-comparison"></div>
         </div>
       </div>
 
@@ -465,8 +509,46 @@
               <button class="ambient-btn" data-ambient="lofi">Lo-fi Pads</button>
             </div>
           </div>
+          <!-- #83 Unlockable Themes -->
           <div class="card">
-            <div class="card-title">Data Management</div>
+            <div class="card-title">Unlockable Themes</div>
+            <div id="unlockable-themes" class="unlockable-themes-grid"></div>
+          </div>
+          <!-- Accessibility Section (#94,95,97,99,100,101,104,105) -->
+          <div class="card">
+            <div class="card-title">Accessibility</div>
+            <div class="setting-row">
+              <div><div class="setting-label">High Contrast</div><div class="setting-desc">WCAG AAA contrast ratios</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="high-contrast-toggle" aria-label="High contrast mode"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Colorblind Mode</div><div class="setting-desc">Color-safe palettes</div></div>
+              <div class="colorblind-options">
+                <button class="cb-opt active" data-cb="none" aria-label="No colorblind palette">Off</button>
+                <button class="cb-opt" data-cb="deuteranopia" aria-label="Deuteranopia palette">Deut.</button>
+                <button class="cb-opt" data-cb="protanopia" aria-label="Protanopia palette">Prot.</button>
+                <button class="cb-opt" data-cb="tritanopia" aria-label="Tritanopia palette">Trit.</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Voice Control</div><div class="setting-desc">Control timer with voice commands</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="voice-control-toggle" aria-label="Voice control"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Haptic Feedback</div><div class="setting-desc">Vibrate on button press and timer end</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="haptic-toggle" aria-label="Haptic feedback"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Language</div><div class="setting-desc">Interface language</div></div>
+              <select id="language-select" class="setting-input" style="width:90px;" aria-label="Select language">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+              </select>
+            </div>
+          </div>
+          <!-- Data Section (#109,114) -->
+          <div class="card">
+            <div class="card-title">Data</div>
             <div class="setting-row">
               <div><div class="setting-label">Export Backup</div><div class="setting-desc">Download all data as JSON</div></div>
               <button class="btn btn-export" id="backup-btn">Export</button>
@@ -474,6 +556,26 @@
             <div class="setting-row">
               <div><div class="setting-label">Import Backup</div><div class="setting-desc">Restore from JSON backup</div></div>
               <label class="btn btn-secondary-action" style="cursor:pointer;">Import<input type="file" accept=".json" id="restore-input" style="display:none"></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Download iCal</div><div class="setting-desc">Export sessions as .ics calendar file</div></div>
+              <button class="btn btn-export" id="ical-download-btn" aria-label="Download iCal file">iCal</button>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Webhook URL</div><div class="setting-desc">POST session data on completion</div></div>
+              <input type="url" id="webhook-url-input" class="setting-input" style="width:160px;font-size:0.72rem;" placeholder="https://..." aria-label="Webhook URL">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Webhook Enabled</div><div class="setting-desc">Fire webhook on session end</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="webhook-enabled-toggle" aria-label="Enable webhook"><span class="toggle-track"></span></label>
+            </div>
+          </div>
+          <!-- Technical Section (#121) -->
+          <div class="card">
+            <div class="card-title">Technical</div>
+            <div class="setting-row">
+              <div><div class="setting-label">Performance Mode</div><div class="setting-desc">Disable animations, reduce render frequency</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="performance-mode-toggle" aria-label="Performance mode"><span class="toggle-track"></span></label>
             </div>
           </div>
           <button class="btn btn-save" id="save-settings-btn">Save Settings</button>
@@ -485,6 +587,8 @@
 
   <div class="save-toast" id="save-toast">Settings saved!</div>
   <div class="celebration" id="celebration"></div>
+  <!-- #94 Screen reader live region -->
+  <div id="aria-live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 
   <script type="module" src="js/main.js"></script>
 </body>
