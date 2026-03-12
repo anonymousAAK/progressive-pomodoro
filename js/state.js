@@ -47,6 +47,39 @@ export const state = {
   sessionHistory: [],
   streakData: { current: 0, best: 0, lastDate: null },
   unlockedAchievements: [],
+
+  // Feature: count-up toggle (#1)
+  countUp: false,
+
+  // Feature: session target planner (#2)
+  sessionTarget: 0,
+
+  // Feature: micro-break reminders (#3)
+  microBreakEnabled: true,
+  microBreakShown: false,
+
+  // Feature: energy level tracker (#4)
+  currentEnergy: '',
+
+  // Feature: intention setting (#6)
+  currentIntention: '',
+
+  // Feature: affirmations (#7)
+  affirmationsEnabled: true,
+
+  // Feature: distraction-free mode (#8)
+  isFocusMode: false,
+
+  // Feature: XP + Level system (#10)
+  xp: 0,
+  level: 1,
+
+  // Feature: streak shields (#11)
+  streakShields: 0,
+
+  // Task queue (#19)
+  taskQueue: [],
+  nextTaskId: 1,
 };
 
 // --- Static data ---
@@ -130,6 +163,39 @@ export const DAILY_CHALLENGES = [
     desc: 'Complete 3 sessions with zero distractions',
     check: h => { const t = new Date().toDateString(); return h.filter(x => x.date === t && (x.distractions || 0) === 0).length >= 3; },
   },
+];
+
+export const MILESTONES = new Set([1, 5, 10, 25, 50, 100, 250, 500]);
+
+export function calculateXP(durationMin, rating) {
+  const ratingBonus = { distracted: 0, okay: 5, focused: 15, flow: 30 }[rating] || 0;
+  return 10 + Math.floor(durationMin * 2) + ratingBonus;
+}
+
+export const BREAK_ACTIVITIES = [
+  'Do 10 shoulder rolls',
+  'Drink a glass of water',
+  'Stand up and stretch for 60 seconds',
+  'Look out a window for 20 seconds',
+  'Take 5 deep breaths',
+  'Walk around for 2 minutes',
+  'Rest your eyes — close them for 30 seconds',
+  'Step outside for fresh air if possible',
+  'Do a quick neck and shoulder massage',
+  'Tidy one small area of your desk',
+];
+
+export const AFFIRMATIONS = [
+  'Deep work creates deep value.',
+  'One focused session at a time.',
+  'Your future self thanks you.',
+  'Progress, not perfection.',
+  'Clarity comes through action.',
+  'Small steps, big results.',
+  'You are capable of this.',
+  'This session matters.',
+  'Quiet the noise. Find the flow.',
+  'Every minute of focus counts.',
 ];
 
 export const TIMER_PRESETS = {

@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/history.css">
   <link rel="stylesheet" href="css/stats.css">
   <link rel="stylesheet" href="css/settings.css">
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
 
@@ -33,6 +34,7 @@
       <p class="subtitle">Adapt. Focus. Flow.</p>
       <div class="header-actions">
         <button id="theme-toggle-btn" class="btn-icon" title="Toggle light/dark">☀️</button>
+        <button id="focus-mode-btn" class="btn-icon" title="Distraction-free mode">⛶</button>
       </div>
     </header>
 
@@ -50,6 +52,10 @@
         <span class="stat-value" id="session-count">0</span>
         <span class="stat-label">Sessions</span>
       </div>
+      <div class="stat-chip xp">
+        <span class="stat-value" id="xp-value">Lv.1</span>
+        <span class="stat-label">Level</span>
+      </div>
     </div>
 
     <!-- Navigation -->
@@ -58,6 +64,7 @@
       <button data-target="history-page" class="nav-btn">History</button>
       <button data-target="stats-page"   class="nav-btn">Stats</button>
       <button data-target="settings-page"class="nav-btn">Settings</button>
+      <button data-target="tasks-page"   class="nav-btn">Tasks</button>
     </nav>
 
     <main>
@@ -78,6 +85,11 @@
           <div class="task-input-wrapper">
             <input type="text" id="task-input" class="task-input"
               placeholder="What are you working on?" maxlength="60" autocomplete="off">
+          </div>
+
+          <!-- Intention setting -->
+          <div class="intention-wrapper" id="intention-wrapper">
+            <input type="text" id="intention-input" class="task-input" placeholder="Set your intention for this session… (optional)" maxlength="80" autocomplete="off">
           </div>
 
           <!-- Category chips -->
@@ -110,6 +122,14 @@
             <div class="session-dot"></div>
             <div class="session-dot"></div>
             <div class="session-dot"></div>
+          </div>
+
+          <!-- Session target progress -->
+          <div class="session-target-row hidden" id="session-target-row">
+            <span id="session-target-text">0 / 0 today</span>
+            <div class="target-bar">
+              <div class="target-bar-fill" id="target-bar-fill"></div>
+            </div>
           </div>
 
           <!-- Timer controls -->
