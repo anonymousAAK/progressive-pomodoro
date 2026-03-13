@@ -1,0 +1,120 @@
+/* ===== Stats grid (4 summary cards) ===== */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.stats-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; text-align: center; }
+.stats-card .s-value { font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: 700; }
+.stats-card .s-label { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ===== Focus distribution bar ===== */
+.focus-distribution { display: flex; gap: 4px; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+.focus-dist-bar { transition: width 0.6s ease; min-width: 0; }
+.focus-dist-bar.distracted { background: var(--accent-distracted); }
+.focus-dist-bar.okay       { background: var(--accent-okay); }
+.focus-dist-bar.focused    { background: var(--accent-focused); }
+.focus-dist-bar.flow       { background: var(--accent-flow); }
+.focus-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.focus-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--text-secondary); }
+.focus-legend-dot  { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ===== Calendar heatmap ===== */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--accent-work);
+  opacity: calc(0.06 + var(--intensity, 0) * 0.74);
+  transition: opacity 0.3s ease;
+  cursor: default;
+}
+.heatmap-cell.today {
+  outline: 2px solid var(--accent-work);
+  outline-offset: 1px;
+}
+.heatmap-legend {
+  display: flex; align-items: center; gap: 6px; margin-top: 6px;
+}
+.heatmap-legend-cells { display: flex; gap: 3px; }
+.heatmap-legend-cells .heatmap-cell { width: 12px; height: 12px; aspect-ratio: unset; }
+
+/* ===== Personal records ===== */
+.records-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.record-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 10px; text-align: center;
+}
+.record-icon  { font-size: 1.4rem; margin-bottom: 6px; }
+.record-value { font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 700; color: var(--accent-work); }
+.record-label { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ===== Achievements ===== */
+.achievements-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.badge {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); transition: var(--transition);
+}
+.badge.unlocked { border-color: var(--accent-work); background: rgba(99,102,241,0.07); }
+.badge.locked   { opacity: 0.4; filter: grayscale(0.5); }
+.badge-icon { font-size: 1.6rem; flex-shrink: 0; }
+.badge-info { min-width: 0; }
+.badge-name { font-size: 0.78rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.badge-desc { font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
+
+/* ===== Hourly chart bars ===== */
+.hourly-chart { display: flex; align-items: flex-end; justify-content: space-between; height: 80px; gap: 2px; padding: 8px 0; }
+.hourly-bar-wrapper { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
+.hourly-bar-track { width: 100%; max-width: 20px; flex: 1; background: rgba(255,255,255,0.03); border-radius: 3px; display: flex; align-items: flex-end; overflow: hidden; }
+.hourly-bar { width: 100%; background: var(--accent-work); border-radius: 3px; min-height: 0; transition: height 0.5s ease; }
+.hourly-label { font-size: 0.5rem; color: var(--text-muted); }
+
+/* ===== Duration distribution ===== */
+.dur-dist-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.dur-dist-label { font-size: 0.72rem; color: var(--text-secondary); min-width: 50px; }
+.dur-dist-track { flex: 1; height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+.dur-dist-bar { height: 100%; background: var(--accent-work); border-radius: 4px; transition: width 0.5s ease; }
+.dur-dist-count { font-size: 0.7rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; min-width: 24px; text-align: right; }
+
+/* ===== Task history ===== */
+.task-hist-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.task-hist-name { font-size: 0.75rem; color: var(--text-secondary); min-width: 80px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-hist-bar-track { flex: 1; height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+.task-hist-bar { height: 100%; background: linear-gradient(90deg, var(--accent-work), var(--accent-flow)); border-radius: 4px; transition: width 0.5s ease; }
+.task-hist-mins { font-size: 0.7rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; min-width: 30px; text-align: right; }
+
+/* ===== Cognitive load stat chip ===== */
+.stat-chip.cognitive .stat-value { font-size: 0.85rem; }
+
+/* ===== #47 Week Comparison ===== */
+.week-cmp-bars { display: flex; align-items: flex-end; gap: 4px; }
+
+/* ===== #51 Visualization Theme Picker ===== */
+.viz-theme-picker {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
+}
+.viz-theme-btn {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  background: var(--bg-card); border: 1px solid var(--border);
+  cursor: pointer; transition: var(--transition); color: var(--text-secondary);
+}
+.viz-theme-btn:hover { border-color: var(--accent-work); }
+.viz-theme-btn.active {
+  border-color: var(--accent-work);
+  background: rgba(99,102,241,0.1);
+  color: var(--text-primary);
+}
+
+/* ===== #58 Export report button ===== */
+#export-report-btn { width: 100%; }
+
+/* ===== Badge share button ===== */
+.badge-share-btn {
+  font-size: 0.6rem; padding: 2px 8px; margin-top: 4px;
+  background: var(--accent-work); color: #fff; border: none;
+  border-radius: 4px; cursor: pointer; transition: opacity 0.2s;
+}
+.badge-share-btn:hover { opacity: 0.85; }

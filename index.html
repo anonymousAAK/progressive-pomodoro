@@ -1,2176 +1,849 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr" data-accent="indigo">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Progressive Pomodoro</title>
-    <meta name="description" content="A beautiful adaptive pomodoro timer that grows with your focus. Track sessions, build streaks, and cultivate deep work.">
-    <meta name="theme-color" content="#0a0a0f">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-        :root {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-card: rgba(255, 255, 255, 0.03);
-            --bg-card-hover: rgba(255, 255, 255, 0.06);
-            --border: rgba(255, 255, 255, 0.06);
-            --border-hover: rgba(255, 255, 255, 0.12);
-            --text-primary: #e8e8ed;
-            --text-secondary: #8b8b9e;
-            --text-muted: #55556a;
-            --accent-work: #6366f1;
-            --accent-work-glow: rgba(99, 102, 241, 0.3);
-            --accent-break: #06b6d4;
-            --accent-break-glow: rgba(6, 182, 212, 0.3);
-            --accent-success: #10b981;
-            --accent-warning: #f59e0b;
-            --accent-danger: #ef4444;
-            --accent-flow: #8b5cf6;
-            --radius: 16px;
-            --radius-sm: 10px;
-            --radius-xs: 6px;
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        [data-theme="light"] {
-            --bg-primary: #f5f5f7;
-            --bg-secondary: #e8e8ed;
-            --bg-card: rgba(0, 0, 0, 0.03);
-            --bg-card-hover: rgba(0, 0, 0, 0.06);
-            --border: rgba(0, 0, 0, 0.08);
-            --border-hover: rgba(0, 0, 0, 0.15);
-            --text-primary: #1a1a2e;
-            --text-secondary: #6b6b80;
-            --text-muted: #9999aa;
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        [data-theme="solarized"] {
-            --bg-primary: #002b36;
-            --bg-secondary: #073642;
-            --bg-card: rgba(255, 255, 255, 0.04);
-            --text-primary: #fdf6e3;
-            --text-secondary: #93a1a1;
-            --text-muted: #586e75;
-            --accent-work: #268bd2;
-            --accent-break: #2aa198;
-        }
-
-        [data-theme="nord"] {
-            --bg-primary: #2e3440;
-            --bg-secondary: #3b4252;
-            --bg-card: rgba(255, 255, 255, 0.04);
-            --text-primary: #eceff4;
-            --text-secondary: #d8dee9;
-            --text-muted: #4c566a;
-            --accent-work: #88c0d0;
-            --accent-break: #a3be8c;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-            transition: background 0.5s ease, color 0.5s ease;
-        }
-
-        body.zen-mode { cursor: none; }
-        body.zen-mode .app-header, body.zen-mode .stats-bar, body.zen-mode .nav,
-        body.zen-mode .session-dots, body.zen-mode .timer-controls,
-        body.zen-mode .focus-quality, body.zen-mode .bottom-nav { display: none !important; }
-        body.zen-mode #app { max-width: 100%; padding: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
-
-        .bg-gradient { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-        .bg-gradient .orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.15; animation: orbFloat 20s ease-in-out infinite; }
-        .bg-gradient .orb-1 { width: 600px; height: 600px; background: var(--accent-work); top: -200px; left: -100px; }
-        .bg-gradient .orb-2 { width: 500px; height: 500px; background: var(--accent-break); bottom: -200px; right: -100px; animation-delay: -7s; }
-        .bg-gradient .orb-3 { width: 400px; height: 400px; background: var(--accent-flow); top: 50%; left: 50%; transform: translate(-50%, -50%); animation-delay: -14s; opacity: 0.08; }
-        @keyframes orbFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(30px, -40px) scale(1.05); }
-            50% { transform: translate(-20px, 20px) scale(0.95); }
-            75% { transform: translate(40px, 30px) scale(1.03); }
-        }
-
-        #app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 16px 16px 100px; min-height: 100vh; }
-
-        .app-header { text-align: center; padding: 24px 0 8px; }
-        .app-header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; background: linear-gradient(135deg, var(--text-primary), var(--text-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .app-header .subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
-
-        /* XP Bar */
-        .xp-bar-wrapper { margin: 8px 0; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-        .xp-bar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-        .xp-level { font-size: 0.75rem; font-weight: 700; color: var(--accent-work); }
-        .xp-amount { font-size: 0.65rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-        .xp-bar { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
-        .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-work), var(--accent-flow)); border-radius: 2px; transition: width 0.5s ease; }
-
-        .stats-bar { display: flex; gap: 8px; margin: 12px 0; }
-        .stat-chip { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 8px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: var(--transition); cursor: pointer; }
-        .stat-chip:hover { background: var(--bg-card-hover); border-color: var(--border-hover); }
-        .stat-chip .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700; }
-        .stat-chip .stat-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
-        .stat-chip.streak .stat-value { color: var(--accent-warning); }
-        .stat-chip.today .stat-value { color: var(--accent-success); }
-        .stat-chip.sessions .stat-value { color: var(--accent-work); }
-
-        /* Bottom Navigation */
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; display: flex; background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); z-index: 100; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-        .bottom-nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: none; background: transparent; color: var(--text-muted); font-family: inherit; font-size: 0.6rem; font-weight: 600; cursor: pointer; transition: var(--transition); border-radius: var(--radius-xs); }
-        .bottom-nav-btn svg { width: 20px; height: 20px; }
-        .bottom-nav-btn:hover, .bottom-nav-btn.active { color: var(--accent-work); }
-        .bottom-nav-btn.active { background: rgba(99, 102, 241, 0.1); }
-
-        .page { display: none; animation: fadeIn 0.3s ease; }
-        .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Timer */
-        .timer-container { display: flex; flex-direction: column; align-items: center; padding: 10px 0; }
-        .task-input-wrapper { width: 100%; margin-bottom: 16px; position: relative; }
-        .task-input { width: 100%; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 0.9rem; outline: none; transition: var(--transition); text-align: center; }
-        .task-input::placeholder { color: var(--text-muted); }
-        .task-input:focus { border-color: var(--accent-work); box-shadow: 0 0 0 3px var(--accent-work-glow); }
-
-        .timer-ring-wrapper { position: relative; width: 260px; height: 260px; margin-bottom: 20px; }
-        .timer-ring-wrapper svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-        .ring-bg { fill: none; stroke: rgba(255,255,255,0.04); stroke-width: 8; }
-        .ring-progress { fill: none; stroke: var(--accent-work); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease, stroke 0.5s ease; filter: drop-shadow(0 0 8px var(--accent-work-glow)); }
-        .ring-progress.break-mode { stroke: var(--accent-break); filter: drop-shadow(0 0 8px var(--accent-break-glow)); }
-        .timer-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .timer-mode { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-muted); margin-bottom: 4px; }
-        .timer-display { font-family: 'JetBrains Mono', monospace; font-size: 3.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
-        .timer-next-info { font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; }
-
-        .session-dots { display: flex; gap: 6px; margin-bottom: 16px; }
-        .session-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.08); transition: var(--transition); }
-        .session-dot.completed { background: var(--accent-work); box-shadow: 0 0 8px var(--accent-work-glow); }
-        .session-dot.current { background: var(--accent-work); animation: dotPulse 2s ease-in-out infinite; }
-        @keyframes dotPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
-
-        .timer-controls { display: flex; gap: 12px; margin-bottom: 16px; }
-        .btn { padding: 14px 32px; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 8px; }
-        .btn-primary { background: var(--accent-work); color: white; box-shadow: 0 4px 16px var(--accent-work-glow); }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 24px var(--accent-work-glow); }
-        .btn-primary.break-mode { background: var(--accent-break); box-shadow: 0 4px 16px var(--accent-break-glow); }
-        .btn-secondary { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border); }
-        .btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--border-hover); }
-        .btn-danger { background: rgba(239,68,68,0.15); color: var(--accent-danger); border: 1px solid rgba(239,68,68,0.2); }
-        .btn-sm { padding: 8px 16px; font-size: 0.8rem; }
-        .btn-icon { padding: 10px; border-radius: var(--radius-xs); background: var(--bg-card); border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; }
-        .btn-icon:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-
-        .focus-quality { display: flex; gap: 8px; width: 100%; margin-bottom: 16px; }
-        .focus-btn { flex: 1; padding: 10px; border: 1px solid var(--border); background: var(--bg-card); border-radius: var(--radius-sm); cursor: pointer; text-align: center; transition: var(--transition); }
-        .focus-btn .emoji { font-size: 1.2rem; display: block; margin-bottom: 2px; }
-        .focus-btn .label { font-size: 0.65rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
-        .focus-btn:hover { background: var(--bg-card-hover); border-color: var(--border-hover); }
-        .focus-btn.selected { border-color: var(--accent-work); background: rgba(99,102,241,0.1); }
-
-        /* Ambient Sounds */
-        .ambient-controls { width: 100%; margin-bottom: 16px; }
-        .ambient-toggle { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); }
-        .ambient-toggle:hover { background: var(--bg-card-hover); }
-        .ambient-toggle .label { font-size: 0.8rem; color: var(--text-secondary); }
-        .ambient-sounds-panel { display: none; margin-top: 8px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-        .ambient-sounds-panel.open { display: block; }
-        .sound-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .sound-btn { padding: 10px 4px; border: 1px solid var(--border); background: transparent; border-radius: var(--radius-xs); cursor: pointer; text-align: center; transition: var(--transition); }
-        .sound-btn .emoji { font-size: 1.3rem; display: block; }
-        .sound-btn .name { font-size: 0.6rem; color: var(--text-muted); margin-top: 2px; }
-        .sound-btn.active { border-color: var(--accent-work); background: rgba(99,102,241,0.1); }
-        .volume-slider { width: 100%; margin-top: 10px; accent-color: var(--accent-work); }
-
-        /* Distraction Logger */
-        .distraction-logger { width: 100%; margin-bottom: 16px; }
-        .distraction-btn { width: 100%; padding: 8px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-muted); font-family: inherit; font-size: 0.75rem; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .distraction-btn:hover { background: var(--bg-card-hover); color: var(--text-secondary); }
-        .distraction-count { background: var(--accent-danger); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; font-weight: 700; }
-
-        /* Cards */
-        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; transition: var(--transition); }
-        .card:hover { border-color: var(--border-hover); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .card-title { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
-        .card-subtitle { font-size: 0.7rem; color: var(--text-muted); }
-
-        /* Tasks Page */
-        .task-list { list-style: none; }
-        .task-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; transition: var(--transition); cursor: pointer; }
-        .task-item:hover { background: var(--bg-card-hover); }
-        .task-item.completed { opacity: 0.5; }
-        .task-item.completed .task-name { text-decoration: line-through; }
-        .task-checkbox { width: 18px; height: 18px; border: 2px solid var(--border-hover); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: var(--transition); }
-        .task-item.completed .task-checkbox { background: var(--accent-success); border-color: var(--accent-success); }
-        .task-name { flex: 1; font-size: 0.85rem; color: var(--text-primary); }
-        .task-pomos { font-size: 0.7rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
-        .task-priority { width: 4px; height: 24px; border-radius: 2px; flex-shrink: 0; }
-        .task-priority.high { background: var(--accent-danger); }
-        .task-priority.medium { background: var(--accent-warning); }
-        .task-priority.low { background: var(--accent-success); }
-        .add-task-form { display: flex; gap: 8px; margin-bottom: 16px; }
-        .add-task-form input { flex: 1; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 0.85rem; outline: none; }
-        .add-task-form input:focus { border-color: var(--accent-work); }
-        .add-task-form select { padding: 10px 8px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-secondary); font-family: inherit; font-size: 0.8rem; outline: none; }
-        .task-filters { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-        .filter-chip { padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; transition: var(--transition); font-family: inherit; }
-        .filter-chip.active { background: rgba(99,102,241,0.15); border-color: var(--accent-work); color: var(--accent-work); }
-        .task-drag-handle { cursor: grab; color: var(--text-muted); font-size: 0.8rem; }
-
-        /* History */
-        .history-list { list-style: none; }
-        .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; transition: var(--transition); }
-        .history-item:hover { background: var(--bg-card-hover); }
-        .history-icon { width: 36px; height: 36px; border-radius: var(--radius-xs); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
-        .history-icon.work { background: rgba(99,102,241,0.15); }
-        .history-icon.break { background: rgba(6,182,212,0.15); }
-        .history-details { flex: 1; min-width: 0; }
-        .history-task { font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .history-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
-        .history-duration { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
-        .history-group-header { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 0 6px; }
-
-        /* Stats */
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
-        .stats-card { padding: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-        .stats-card .label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-        .stats-card .value { font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; font-weight: 700; }
-        .chart-container { width: 100%; height: 160px; position: relative; margin-top: 8px; }
-        .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; padding: 0 4px; }
-        .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--accent-work); min-height: 2px; transition: height 0.5s ease; position: relative; }
-        .bar:hover { opacity: 0.8; }
-        .bar-label { font-size: 0.55rem; color: var(--text-muted); }
-        .bar-tooltip { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; color: var(--text-primary); white-space: nowrap; display: none; z-index: 10; }
-        .bar:hover .bar-tooltip { display: block; }
-
-        /* Heatmap */
-        .heatmap { display: grid; grid-template-columns: repeat(53, 1fr); gap: 2px; margin-top: 8px; }
-        .heatmap-cell { aspect-ratio: 1; border-radius: 2px; background: rgba(255,255,255,0.04); }
-        .heatmap-cell.l1 { background: rgba(99,102,241,0.2); }
-        .heatmap-cell.l2 { background: rgba(99,102,241,0.4); }
-        .heatmap-cell.l3 { background: rgba(99,102,241,0.6); }
-        .heatmap-cell.l4 { background: rgba(99,102,241,0.8); }
-        .heatmap-cell.l5 { background: var(--accent-work); }
-        .heatmap-months { display: flex; justify-content: space-between; margin-top: 4px; }
-        .heatmap-months span { font-size: 0.55rem; color: var(--text-muted); }
-
-        /* Achievements */
-        .achievement-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .achievement-card { padding: 14px 8px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); text-align: center; transition: var(--transition); position: relative; overflow: hidden; }
-        .achievement-card.unlocked { border-color: var(--accent-warning); }
-        .achievement-card.unlocked::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(245,158,11,0.05), transparent); }
-        .achievement-card .ach-icon { font-size: 1.8rem; margin-bottom: 6px; }
-        .achievement-card.locked .ach-icon { filter: grayscale(1) opacity(0.3); }
-        .achievement-card .ach-name { font-size: 0.65rem; font-weight: 700; margin-bottom: 2px; }
-        .achievement-card .ach-desc { font-size: 0.55rem; color: var(--text-muted); }
-        .achievement-card .ach-xp { font-size: 0.6rem; color: var(--accent-warning); font-weight: 700; margin-top: 4px; }
-
-        /* Settings */
-        .settings-section { margin-bottom: 20px; }
-        .settings-title { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
-        .setting-row .setting-label { font-size: 0.85rem; color: var(--text-primary); }
-        .setting-row .setting-desc { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
-        .setting-row input[type="number"] { width: 60px; padding: 6px 8px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-xs); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; text-align: center; outline: none; }
-        .setting-row input[type="number"]:focus { border-color: var(--accent-work); }
-        .setting-row select { padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-xs); color: var(--text-primary); font-family: inherit; font-size: 0.8rem; outline: none; }
-
-        /* Toggle switch */
-        .toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
-        .toggle input { display: none; }
-        .toggle-slider { position: absolute; inset: 0; background: rgba(255,255,255,0.1); border-radius: 12px; transition: var(--transition); }
-        .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: var(--text-secondary); top: 3px; left: 3px; transition: var(--transition); }
-        .toggle input:checked + .toggle-slider { background: var(--accent-work); }
-        .toggle input:checked + .toggle-slider::before { transform: translateX(20px); background: white; }
-
-        /* Color picker */
-        .color-options { display: flex; gap: 8px; flex-wrap: wrap; }
-        .color-swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: var(--transition); }
-        .color-swatch:hover, .color-swatch.active { border-color: white; transform: scale(1.15); }
-
-        /* Modal */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
-        .modal-overlay.open { display: flex; }
-        .modal { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; max-width: 400px; width: 100%; max-height: 80vh; overflow-y: auto; animation: modalIn 0.3s ease; }
-        @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        .modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
-        .modal-close { float: right; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; }
-
-        /* Toast */
-        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
-        .toast { padding: 12px 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 0.8rem; box-shadow: var(--shadow); animation: toastIn 0.3s ease; display: flex; align-items: center; gap: 8px; max-width: 320px; }
-        .toast.success { border-left: 3px solid var(--accent-success); }
-        .toast.warning { border-left: 3px solid var(--accent-warning); }
-        .toast.xp { border-left: 3px solid var(--accent-flow); }
-        @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-
-        /* Progress bar for daily goal */
-        .daily-goal { width: 100%; margin-top: 8px; }
-        .daily-goal-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; margin-top: 4px; }
-        .daily-goal-fill { height: 100%; background: linear-gradient(90deg, var(--accent-success), var(--accent-break)); border-radius: 3px; transition: width 0.5s ease; }
-        .daily-goal-label { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); }
-
-        /* Streaks calendar mini */
-        .streak-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-top: 8px; }
-        .streak-day { aspect-ratio: 1; border-radius: 4px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: var(--text-muted); }
-        .streak-day.has-session { background: rgba(99,102,241,0.3); color: var(--text-primary); }
-        .streak-day.today { border: 1px solid var(--accent-work); }
-
-        /* Keyboard shortcut hints */
-        .kbd { padding: 2px 6px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--text-muted); }
-
-        /* Focus session overlay animation */
-        .focus-pulse { animation: focusPulse 4s ease-in-out infinite; }
-        @keyframes focusPulse {
-            0%, 100% { filter: drop-shadow(0 0 8px var(--accent-work-glow)); }
-            50% { filter: drop-shadow(0 0 20px var(--accent-work-glow)); }
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-        /* Responsive */
-        @media (max-width: 400px) {
-            .timer-display { font-size: 2.8rem; }
-            .timer-ring-wrapper { width: 220px; height: 220px; }
-            .achievement-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-
-        /* Print */
-        @media print {
-            .bottom-nav, .bg-gradient, .toast-container { display: none !important; }
-            body { background: white; color: black; }
-        }
-
-        /* Reduced motion */
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-        }
-
-        /* High contrast */
-        @media (prefers-contrast: high) {
-            :root { --border: rgba(255,255,255,0.2); --text-muted: #8888aa; }
-        }
-
-        /* Screen reader only */
-        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
-
-        .skip-link { position: absolute; top: -40px; left: 0; background: var(--accent-work); color: white; padding: 8px 16px; z-index: 999; font-size: 0.85rem; transition: top 0.3s; }
-        .skip-link:focus { top: 0; }
-
-        /* Tag chips */
-        .tag { display: inline-block; padding: 2px 8px; background: rgba(99,102,241,0.15); color: var(--accent-work); border-radius: 10px; font-size: 0.6rem; font-weight: 600; margin: 0 2px; }
-
-        /* Estimated time */
-        .estimate-badge { font-size: 0.65rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-
-        /* Streak freeze indicator */
-        .freeze-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: rgba(6,182,212,0.15); color: var(--accent-break); border-radius: 10px; font-size: 0.6rem; font-weight: 600; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progressive Pomodoro</title>
+  <meta name="description" content="A beautiful adaptive pomodoro timer that grows with your focus. Track sessions, build streaks, and cultivate deep work.">
+  <meta name="theme-color" content="#0a0a0f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/timer.css">
+  <link rel="stylesheet" href="css/history.css">
+  <link rel="stylesheet" href="css/stats.css">
+  <link rel="stylesheet" href="css/settings.css">
+  <link rel="stylesheet" href="css/batch5.css">
 </head>
 <body>
-    <a href="#main-content" class="skip-link">Skip to content</a>
-    <div class="bg-gradient"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
-    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-    <div id="app">
-        <header class="app-header">
-            <h1>Progressive Pomodoro</h1>
-            <p class="subtitle" id="headerSubtitle">Grow your focus, one session at a time</p>
-        </header>
+  <!-- Animated background -->
+  <div class="bg-gradient">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
 
-        <!-- XP Bar -->
-        <div class="xp-bar-wrapper" id="xpBarWrapper">
-            <div class="xp-bar-header">
-                <span class="xp-level" id="xpLevel">Level 1</span>
-                <span class="xp-amount" id="xpAmount">0 / 100 XP</span>
-            </div>
-            <div class="xp-bar"><div class="xp-bar-fill" id="xpBarFill" style="width: 0%"></div></div>
-        </div>
+  <!-- Affirmation overlay -->
+  <div id="affirmation-overlay" class="affirmation-overlay"></div>
 
-        <!-- Stats bar -->
-        <div class="stats-bar">
-            <div class="stat-chip streak" title="Day streak"><span class="stat-value" id="streakCount">0</span><span class="stat-label">Streak</span></div>
-            <div class="stat-chip today" title="Today's sessions"><span class="stat-value" id="todayCount">0</span><span class="stat-label">Today</span></div>
-            <div class="stat-chip sessions" title="Total sessions"><span class="stat-value" id="totalCount">0</span><span class="stat-label">Total</span></div>
-        </div>
+  <div id="app">
 
-        <!-- Daily Goal -->
-        <div class="daily-goal">
-            <div class="daily-goal-label"><span id="goalLabel">Daily Goal</span><span id="goalProgress">0 / 4 sessions</span></div>
-            <div class="daily-goal-bar"><div class="daily-goal-fill" id="goalFill" style="width: 0%"></div></div>
-        </div>
+    <!-- Header -->
+    <header class="app-header" role="banner">
+      <h1>Progressive Pomodoro</h1>
+      <p class="subtitle">Adapt. Focus. Flow.</p>
+      <div class="header-actions">
+        <button id="voice-toggle-btn" class="btn-icon" title="Toggle voice control" aria-label="Toggle voice control">🎤</button>
+        <button id="widget-toggle-btn" class="btn-icon" title="Toggle widget mode" aria-label="Toggle mini widget">📌</button>
+        <button id="theme-toggle-btn" class="btn-icon" title="Toggle light/dark" aria-label="Toggle light or dark theme">☀️</button>
+        <button id="focus-mode-btn" class="btn-icon" title="Distraction-free mode" aria-label="Toggle distraction-free mode">⛶</button>
+      </div>
+    </header>
 
-        <main id="main-content">
-            <!-- Pages controlled by bottom nav -->
-
-            <!-- Timer Page -->
-            <div class="page active" id="timerPage" role="main">
-                <div class="timer-container">
-                    <div class="task-input-wrapper">
-                        <input type="text" class="task-input" id="taskInput" placeholder="What are you working on?" aria-label="Current task" maxlength="100" autocomplete="off">
-                    </div>
-
-                    <div class="timer-ring-wrapper" role="timer" aria-label="Pomodoro timer">
-                        <svg viewBox="0 0 100 100">
-                            <circle class="ring-bg" cx="50" cy="50" r="45"></circle>
-                            <circle class="ring-progress" id="ringProgress" cx="50" cy="50" r="45" stroke-dasharray="282.7" stroke-dashoffset="0"></circle>
-                        </svg>
-                        <div class="timer-inner">
-                            <div class="timer-mode" id="timerMode"><span class="mode-icon">⏱</span> Focus</div>
-                            <div class="timer-display" id="timerDisplay" aria-live="polite">25:00</div>
-                            <div class="timer-next-info" id="timerNextInfo">Session 1 of 4</div>
-                        </div>
-                    </div>
-
-                    <div class="session-dots" id="sessionDots" aria-label="Session progress"></div>
-
-                    <div class="timer-controls">
-                        <button class="btn btn-primary" id="startBtn" aria-label="Start timer">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-                            Start
-                        </button>
-                        <button class="btn btn-secondary" id="skipBtn" style="display:none" aria-label="Skip session">Skip</button>
-                        <button class="btn btn-icon" id="resetBtn" title="Reset (R)" aria-label="Reset timer">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-                        </button>
-                    </div>
-
-                    <div class="focus-quality" id="focusQuality" style="display:none">
-                        <button class="focus-btn" data-quality="flow" aria-label="Flow state"><span class="emoji">🔥</span><span class="label">Flow</span></button>
-                        <button class="focus-btn" data-quality="focused" aria-label="Focused"><span class="emoji">🎯</span><span class="label">Focused</span></button>
-                        <button class="focus-btn" data-quality="okay" aria-label="Okay"><span class="emoji">😊</span><span class="label">Okay</span></button>
-                        <button class="focus-btn" data-quality="distracted" aria-label="Distracted"><span class="emoji">😵‍💫</span><span class="label">Distracted</span></button>
-                    </div>
-
-                    <!-- Ambient Sounds -->
-                    <div class="ambient-controls">
-                        <div class="ambient-toggle" id="ambientToggle">
-                            <span class="label">🎧 Ambient Sounds</span>
-                            <span style="font-size:0.7rem;color:var(--text-muted)" id="ambientStatus">Off</span>
-                        </div>
-                        <div class="ambient-sounds-panel" id="ambientPanel">
-                            <div class="sound-grid">
-                                <button class="sound-btn" data-sound="rain"><span class="emoji">🌧</span><span class="name">Rain</span></button>
-                                <button class="sound-btn" data-sound="forest"><span class="emoji">🌲</span><span class="name">Forest</span></button>
-                                <button class="sound-btn" data-sound="cafe"><span class="emoji">☕</span><span class="name">Café</span></button>
-                                <button class="sound-btn" data-sound="waves"><span class="emoji">🌊</span><span class="name">Waves</span></button>
-                                <button class="sound-btn" data-sound="fire"><span class="emoji">🔥</span><span class="name">Fire</span></button>
-                                <button class="sound-btn" data-sound="wind"><span class="emoji">💨</span><span class="name">Wind</span></button>
-                                <button class="sound-btn" data-sound="thunder"><span class="emoji">⛈</span><span class="name">Thunder</span></button>
-                                <button class="sound-btn" data-sound="whitenoise"><span class="emoji">📻</span><span class="name">White</span></button>
-                            </div>
-                            <input type="range" class="volume-slider" id="ambientVolume" min="0" max="100" value="50" aria-label="Volume">
-                        </div>
-                    </div>
-
-                    <!-- Distraction Logger -->
-                    <div class="distraction-logger" id="distractionLogger" style="display:none">
-                        <button class="distraction-btn" id="logDistractionBtn">
-                            <span>⚡ Log Distraction</span>
-                            <span class="distraction-count" id="distractionCount">0</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tasks Page -->
-            <div class="page" id="tasksPage">
-                <div class="add-task-form">
-                    <input type="text" id="newTaskInput" placeholder="Add a task..." aria-label="New task name">
-                    <select id="newTaskPriority" aria-label="Task priority">
-                        <option value="medium">Med</option>
-                        <option value="high">High</option>
-                        <option value="low">Low</option>
-                    </select>
-                    <button class="btn btn-primary btn-sm" id="addTaskBtn">Add</button>
-                </div>
-                <div class="task-filters">
-                    <button class="filter-chip active" data-filter="all">All</button>
-                    <button class="filter-chip" data-filter="active">Active</button>
-                    <button class="filter-chip" data-filter="completed">Done</button>
-                    <button class="filter-chip" data-filter="high">🔴 High</button>
-                </div>
-                <ul class="task-list" id="taskList"></ul>
-                <div style="text-align:center;margin-top:12px">
-                    <button class="btn btn-sm btn-secondary" id="clearCompletedBtn">Clear Completed</button>
-                </div>
-            </div>
-
-            <!-- History Page -->
-            <div class="page" id="historyPage">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                    <h2 style="font-size:1rem;font-weight:700">Session History</h2>
-                    <button class="btn btn-sm btn-secondary" id="exportHistoryBtn">Export CSV</button>
-                </div>
-                <div id="historyList"></div>
-                <div id="historyEmpty" style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:0.85rem;display:none">
-                    No sessions yet. Start your first focus session!
-                </div>
-            </div>
-
-            <!-- Stats Page -->
-            <div class="page" id="statsPage">
-                <h2 style="font-size:1rem;font-weight:700;margin-bottom:12px">Statistics</h2>
-                <div class="stats-grid">
-                    <div class="stats-card"><div class="label">Total Focus</div><div class="value" id="statTotalTime">0h 0m</div></div>
-                    <div class="stats-card"><div class="label">Sessions</div><div class="value" id="statTotalSessions">0</div></div>
-                    <div class="stats-card"><div class="label">Best Streak</div><div class="value" id="statBestStreak">0</div></div>
-                    <div class="stats-card"><div class="label">Avg Focus</div><div class="value" id="statAvgFocus">--</div></div>
-                    <div class="stats-card"><div class="label">This Week</div><div class="value" id="statThisWeek">0</div></div>
-                    <div class="stats-card"><div class="label">This Month</div><div class="value" id="statThisMonth">0</div></div>
-                    <div class="stats-card"><div class="label">Total XP</div><div class="value" id="statTotalXP">0</div></div>
-                    <div class="stats-card"><div class="label">Distractions</div><div class="value" id="statDistractions">0</div></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Weekly Activity</span><span class="card-subtitle" id="weekLabel"></span></div>
-                    <div class="bar-chart" id="weeklyChart"></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Focus Heatmap</span><span class="card-subtitle">Last 12 months</span></div>
-                    <div class="heatmap" id="heatmap"></div>
-                    <div class="heatmap-months"><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Hourly Distribution</span></div>
-                    <div class="bar-chart" id="hourlyChart"></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Focus Quality</span></div>
-                    <div id="qualityBreakdown"></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Productivity Score</span></div>
-                    <div style="text-align:center;padding:12px 0">
-                        <div style="font-family:'JetBrains Mono',monospace;font-size:2.5rem;font-weight:700;color:var(--accent-success)" id="productivityScore">0</div>
-                        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">Based on consistency, duration & focus quality</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Achievements Page -->
-            <div class="page" id="achievementsPage">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                    <h2 style="font-size:1rem;font-weight:700">Achievements</h2>
-                    <span style="font-size:0.75rem;color:var(--text-muted)" id="achievementCount">0/0 unlocked</span>
-                </div>
-                <div class="achievement-grid" id="achievementGrid"></div>
-            </div>
-
-            <!-- Settings Page -->
-            <div class="page" id="settingsPage">
-                <h2 style="font-size:1rem;font-weight:700;margin-bottom:16px">Settings</h2>
-
-                <div class="settings-section">
-                    <div class="settings-title">Timer</div>
-                    <div class="setting-row"><div><div class="setting-label">Focus Duration</div><div class="setting-desc">Minutes per focus session</div></div><input type="number" id="setFocusDuration" min="1" max="120" value="25"></div>
-                    <div class="setting-row"><div><div class="setting-label">Short Break</div><div class="setting-desc">Minutes for short break</div></div><input type="number" id="setShortBreak" min="1" max="30" value="5"></div>
-                    <div class="setting-row"><div><div class="setting-label">Long Break</div><div class="setting-desc">Minutes for long break</div></div><input type="number" id="setLongBreak" min="1" max="60" value="15"></div>
-                    <div class="setting-row"><div><div class="setting-label">Sessions Until Long Break</div></div><input type="number" id="setSessions" min="2" max="10" value="4"></div>
-                    <div class="setting-row"><div><div class="setting-label">Daily Goal</div><div class="setting-desc">Target sessions per day</div></div><input type="number" id="setDailyGoal" min="1" max="20" value="4"></div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-title">Progressive Timer</div>
-                    <div class="setting-row"><div><div class="setting-label">Enable Progressive</div><div class="setting-desc">Timer grows with your streak</div></div><label class="toggle"><input type="checkbox" id="setProgressive" checked><span class="toggle-slider"></span></label></div>
-                    <div class="setting-row"><div><div class="setting-label">Growth per session (min)</div></div><input type="number" id="setGrowthRate" min="0" max="10" value="2"></div>
-                    <div class="setting-row"><div><div class="setting-label">Max Focus Duration</div></div><input type="number" id="setMaxFocus" min="25" max="120" value="50"></div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-title">Auto Features</div>
-                    <div class="setting-row"><div><div class="setting-label">Auto-start Breaks</div></div><label class="toggle"><input type="checkbox" id="setAutoBreak"><span class="toggle-slider"></span></label></div>
-                    <div class="setting-row"><div><div class="setting-label">Auto-start Focus</div></div><label class="toggle"><input type="checkbox" id="setAutoFocus"><span class="toggle-slider"></span></label></div>
-                    <div class="setting-row"><div><div class="setting-label">Count Up After Zero</div><div class="setting-desc">Timer counts up when reaching 0</div></div><label class="toggle"><input type="checkbox" id="setCountUp"><span class="toggle-slider"></span></label></div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-title">Appearance</div>
-                    <div class="setting-row"><div><div class="setting-label">Theme</div></div>
-                        <select id="setTheme"><option value="dark">Dark</option><option value="light">Light</option><option value="solarized">Solarized</option><option value="nord">Nord</option></select>
-                    </div>
-                    <div class="setting-row"><div><div class="setting-label">Accent Color</div></div>
-                        <div class="color-options" id="colorOptions">
-                            <div class="color-swatch active" data-color="#6366f1" style="background:#6366f1" title="Indigo"></div>
-                            <div class="color-swatch" data-color="#8b5cf6" style="background:#8b5cf6" title="Purple"></div>
-                            <div class="color-swatch" data-color="#ec4899" style="background:#ec4899" title="Pink"></div>
-                            <div class="color-swatch" data-color="#ef4444" style="background:#ef4444" title="Red"></div>
-                            <div class="color-swatch" data-color="#f59e0b" style="background:#f59e0b" title="Amber"></div>
-                            <div class="color-swatch" data-color="#10b981" style="background:#10b981" title="Emerald"></div>
-                            <div class="color-swatch" data-color="#06b6d4" style="background:#06b6d4" title="Cyan"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-title">Notifications</div>
-                    <div class="setting-row"><div><div class="setting-label">Browser Notifications</div></div><label class="toggle"><input type="checkbox" id="setNotifications" checked><span class="toggle-slider"></span></label></div>
-                    <div class="setting-row"><div><div class="setting-label">Sound</div></div><label class="toggle"><input type="checkbox" id="setSound" checked><span class="toggle-slider"></span></label></div>
-                    <div class="setting-row"><div><div class="setting-label">Tick Sound</div></div><label class="toggle"><input type="checkbox" id="setTickSound"><span class="toggle-slider"></span></label></div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-title">Focus</div>
-                    <div class="setting-row"><div><div class="setting-label">Track Focus Quality</div></div><label class="toggle"><input type="checkbox" id="setTrackFocus" checked><span class="toggle-slider"></span></label></div>
-                    <div class="setting-row"><div><div class="setting-label">Distraction Logging</div></div><label class="toggle"><input type="checkbox" id="setDistractionLog" checked><span class="toggle-slider"></span></label></div>
-                    <div class="setting-row"><div><div class="setting-label">Streak Freeze</div><div class="setting-desc">Protect streak for 1 missed day</div></div><label class="toggle"><input type="checkbox" id="setStreakFreeze"><span class="toggle-slider"></span></label></div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-title">Data</div>
-                    <div class="setting-row" style="flex-wrap:wrap;gap:8px">
-                        <button class="btn btn-sm btn-secondary" id="exportDataBtn">Export Data</button>
-                        <button class="btn btn-sm btn-secondary" id="importDataBtn">Import Data</button>
-                        <button class="btn btn-sm btn-danger" id="resetDataBtn">Reset All</button>
-                    </div>
-                    <input type="file" id="importFileInput" accept=".json" style="display:none">
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-title">Keyboard Shortcuts</div>
-                    <div class="setting-row"><span>Start/Pause</span><span class="kbd">Space</span></div>
-                    <div class="setting-row"><span>Reset</span><span class="kbd">R</span></div>
-                    <div class="setting-row"><span>Skip</span><span class="kbd">S</span></div>
-                    <div class="setting-row"><span>Zen Mode</span><span class="kbd">Z</span></div>
-                    <div class="setting-row"><span>Log Distraction</span><span class="kbd">D</span></div>
-                    <div class="setting-row"><span>Timer Page</span><span class="kbd">1</span></div>
-                    <div class="setting-row"><span>Tasks Page</span><span class="kbd">2</span></div>
-                    <div class="setting-row"><span>History</span><span class="kbd">3</span></div>
-                    <div class="setting-row"><span>Stats</span><span class="kbd">4</span></div>
-                    <div class="setting-row"><span>Achievements</span><span class="kbd">5</span></div>
-                    <div class="setting-row"><span>Settings</span><span class="kbd">6</span></div>
-                </div>
-
-                <div style="text-align:center;padding:20px 0;font-size:0.7rem;color:var(--text-muted)">
-                    Progressive Pomodoro v2.0<br>
-                    Built with focus and flow ✨
-                </div>
-            </div>
-        </main>
+    <!-- Top stats bar -->
+    <div class="stats-bar" role="status" aria-label="Focus statistics summary">
+      <div class="stat-chip streak">
+        <span class="stat-value" id="streak-value">0</span>
+        <span class="stat-label">Day Streak</span>
+      </div>
+      <div class="stat-chip today">
+        <span class="stat-value" id="today-minutes">0m</span>
+        <span class="stat-label">Today</span>
+      </div>
+      <div class="stat-chip sessions">
+        <span class="stat-value" id="session-count">0</span>
+        <span class="stat-label">Sessions</span>
+      </div>
+      <div class="stat-chip xp">
+        <span class="stat-value" id="xp-value">Lv.1</span>
+        <span class="stat-label">Level</span>
+      </div>
+      <div class="stat-chip cognitive">
+        <span class="stat-value" id="cognitive-load-value">Low</span>
+        <span class="stat-label">Cog. Load</span>
+      </div>
+      <div class="stat-chip coins" aria-label="Focus coins balance">
+        <span class="stat-value" id="coin-value" style="color:#f59e0b;">0</span>
+        <span class="stat-label">🪙 Coins</span>
+      </div>
     </div>
+    <!-- Multiplier badge (#82) -->
+    <div id="multiplier-badge" class="multiplier-badge hidden" aria-live="polite"></div>
 
-    <!-- Bottom Navigation -->
-    <nav class="bottom-nav" aria-label="Main navigation">
-        <button class="bottom-nav-btn active" data-page="timerPage" aria-label="Timer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
-            <span>Timer</span>
-        </button>
-        <button class="bottom-nav-btn" data-page="tasksPage" aria-label="Tasks">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-            <span>Tasks</span>
-        </button>
-        <button class="bottom-nav-btn" data-page="historyPage" aria-label="History">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span>History</span>
-        </button>
-        <button class="bottom-nav-btn" data-page="statsPage" aria-label="Stats">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-            <span>Stats</span>
-        </button>
-        <button class="bottom-nav-btn" data-page="achievementsPage" aria-label="Achievements">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-2 5l-5-3.5V7l5-3.5L12 2l2 1.5L19 7v9.5L14 20l-2-5z"/></svg>
-            <span>Awards</span>
-        </button>
-        <button class="bottom-nav-btn" data-page="settingsPage" aria-label="Settings">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-            <span>Settings</span>
-        </button>
+    <!-- Navigation -->
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+      <button data-target="timer-page"   class="nav-btn active" tabindex="1" aria-label="Navigate to Timer">Timer</button>
+      <button data-target="history-page" class="nav-btn" tabindex="2" aria-label="Navigate to History">History</button>
+      <button data-target="stats-page"   class="nav-btn" tabindex="3" aria-label="Navigate to Stats">Stats</button>
+      <button data-target="tasks-page"   class="nav-btn" tabindex="4" aria-label="Navigate to Tasks">Tasks</button>
+      <button data-target="settings-page"class="nav-btn" tabindex="5" aria-label="Navigate to Settings">Settings</button>
     </nav>
 
-    <!-- Modal -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal" id="modal" role="dialog" aria-modal="true">
-            <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
-            <div id="modalContent"></div>
+    <main role="main">
+
+      <!-- ===== TIMER PAGE ===== -->
+      <div id="timer-page" class="page active">
+        <div class="timer-container">
+
+          <!-- Preset buttons -->
+          <div class="presets-row" id="presets-row">
+            <button class="preset-btn active" data-preset="micro">Micro<span>5/5</span></button>
+            <button class="preset-btn" data-preset="classic">Classic<span>25/5</span></button>
+            <button class="preset-btn" data-preset="deepwork">Deep Work<span>50/10</span></button>
+            <button class="preset-btn" data-preset="sprint">Sprint<span>15/3</span></button>
+          </div>
+
+          <!-- Task input -->
+          <div class="task-input-wrapper">
+            <input type="text" id="task-input" class="task-input"
+              placeholder="What are you working on?" maxlength="60" autocomplete="off">
+          </div>
+
+          <!-- Intention setting -->
+          <div class="intention-wrapper" id="intention-wrapper">
+            <input type="text" id="intention-input" class="task-input"
+              placeholder="Set your intention for this session… (optional)" maxlength="80" autocomplete="off">
+          </div>
+
+          <!-- Energy level row -->
+          <div class="energy-row" id="energy-row">
+            <span class="energy-label">Energy:</span>
+            <button class="energy-btn" data-energy="low">🔋 Low</button>
+            <button class="energy-btn" data-energy="medium">⚡ Medium</button>
+            <button class="energy-btn" data-energy="high">🚀 High</button>
+          </div>
+
+          <!-- Category chips -->
+          <div class="category-row" id="category-row">
+            <button class="category-chip" data-cat="work">💼 Work</button>
+            <button class="category-chip" data-cat="study">📚 Study</button>
+            <button class="category-chip" data-cat="creative">🎨 Creative</button>
+            <button class="category-chip" data-cat="admin">📋 Admin</button>
+            <button class="category-chip" data-cat="personal">🏠 Personal</button>
+            <button class="category-chip" data-cat="health">❤️ Health</button>
+          </div>
+
+          <!-- Mood tracker (#21) -->
+          <div class="mood-row" id="mood-row">
+            <span class="mood-label">Mood:</span>
+            <button class="mood-btn" data-mood="happy">😊</button>
+            <button class="mood-btn" data-mood="neutral">😐</button>
+            <button class="mood-btn" data-mood="sad">😔</button>
+            <button class="mood-btn" data-mood="frustrated">😤</button>
+            <button class="mood-btn" data-mood="tired">😴</button>
+          </div>
+
+          <!-- Task complexity (#28) -->
+          <div class="complexity-row" id="complexity-row">
+            <span class="complexity-label">Complexity:</span>
+            <div class="complexity-stars" id="complexity-stars">
+              <button class="complexity-star" data-complexity="1">★</button>
+              <button class="complexity-star" data-complexity="2">★</button>
+              <button class="complexity-star" data-complexity="3">★</button>
+              <button class="complexity-star" data-complexity="4">★</button>
+              <button class="complexity-star" data-complexity="5">★</button>
+            </div>
+          </div>
+
+          <!-- Lockout badge (#9) -->
+          <div class="lockout-badge hidden" id="lockout-badge">
+            🔒 Focus Lockout: <span id="lockout-count">0</span> sessions remaining
+          </div>
+
+          <!-- Circular timer ring -->
+          <div class="timer-ring-wrapper">
+            <svg viewBox="0 0 260 260">
+              <circle class="ring-bg"       cx="130" cy="130" r="116"/>
+              <circle id="ring-progress" class="ring-progress" cx="130" cy="130" r="116"
+                stroke-dasharray="729.12" stroke-dashoffset="729.12"/>
+            </svg>
+            <div class="timer-inner">
+              <div class="timer-mode" id="timer-mode"><span class="mode-icon">⚡</span> Work</div>
+              <div class="timer-display" id="timer-display">05:00</div>
+              <div class="timer-next-info" id="timer-next-info">Next: 5 min break</div>
+            </div>
+          </div>
+
+          <!-- Session dots -->
+          <div class="session-dots" id="session-dots">
+            <div class="session-dot active"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+          </div>
+
+          <!-- Session target progress -->
+          <div class="session-target-row hidden" id="session-target-row">
+            <span id="session-target-text">0 / 0 today</span>
+            <div class="target-bar">
+              <div class="target-bar-fill" id="target-bar-fill"></div>
+            </div>
+          </div>
+
+          <!-- Focus score banner -->
+          <div class="focus-score-banner" id="focus-score-banner">
+            Today's focus score: <strong id="focus-score-value">—</strong>
+          </div>
+
+          <!-- Pause counter (#4) -->
+          <div class="pause-counter hidden" id="pause-counter">
+            Pauses remaining: <span id="pauses-remaining">0</span>
+          </div>
+
+          <!-- Timer controls -->
+          <div class="timer-controls" id="timer-controls" role="group" aria-label="Timer controls">
+            <button class="btn btn-secondary" id="stop-btn" title="Reset (R)" aria-label="Reset timer" tabindex="8">⏹</button>
+            <button class="btn btn-primary"   id="start-pause-btn" title="Start/Pause (Space)" aria-label="Start or pause timer" tabindex="6">Start</button>
+            <button class="btn btn-secondary" id="skip-btn" title="Skip (S)" aria-label="Skip current phase" tabindex="7">⏭</button>
+          </div>
+
+          <!-- Skip break -->
+          <div class="skip-break-wrapper hidden" id="skip-break-wrapper">
+            <button class="btn btn-skip" id="skip-break-btn">Skip Break →</button>
+          </div>
+
+          <!-- Quick task switch (shown while timer running) -->
+          <div class="quick-switch-wrapper hidden" id="quick-switch-wrapper">
+            <input type="text" id="quick-switch-input" class="task-input"
+              placeholder="Switch task mid-session…" maxlength="60" autocomplete="off">
+            <button class="btn btn-secondary" id="quick-switch-btn">Switch</button>
+          </div>
+
+          <!-- Distraction counter -->
+          <div class="distraction-wrapper hidden" id="distraction-wrapper">
+            <button class="btn-distraction" id="distraction-btn">
+              <span id="distraction-count">0</span> distractions
+            </button>
+          </div>
+
+          <!-- Break activity suggestion -->
+          <div class="break-activity-card hidden" id="break-activity-card">
+            <div class="break-activity-header">
+              <span>🌿 Break Activity</span>
+              <button class="btn-icon" id="next-activity-btn" title="Next suggestion">↻</button>
+            </div>
+            <div class="break-activity-text" id="break-activity-text"></div>
+          </div>
+
+          <!-- Focus rating -->
+          <div class="focus-rating hidden" id="focus-rating">
+            <!-- Reflection prompt (#25) -->
+            <div class="reflection-prompt" id="reflection-prompt">
+              <p class="reflection-question" id="reflection-question"></p>
+            </div>
+            <p class="focus-rating-title">How was your focus?</p>
+            <p class="focus-rating-subtitle">This adjusts your next work interval</p>
+            <div class="focus-grid" role="group" aria-label="Focus rating options">
+              <button data-rating="distracted" class="focus-btn focus-btn-distracted" aria-label="Rate focus as Distracted, decreases interval">
+                <span class="focus-emoji">😵‍💫</span>Distracted<span class="focus-effect">−interval</span>
+              </button>
+              <button data-rating="okay" class="focus-btn focus-btn-okay" aria-label="Rate focus as Okay, no change">
+                <span class="focus-emoji">😐</span>Okay<span class="focus-effect">no change</span>
+              </button>
+              <button data-rating="focused" class="focus-btn focus-btn-focused" aria-label="Rate focus as Focused, increases interval">
+                <span class="focus-emoji">🎯</span>Focused<span class="focus-effect">+interval</span>
+              </button>
+              <button data-rating="flow" class="focus-btn focus-btn-flow" aria-label="Rate focus as Flow State, doubles interval increase">
+                <span class="focus-emoji">🚀</span>Flow State<span class="focus-effect">+2× interval</span>
+              </button>
+            </div>
+            <div class="session-note-wrapper">
+              <textarea id="session-note-input" class="session-note-input" rows="2" maxlength="120"
+                placeholder="Quick note about this session… (optional)"></textarea>
+            </div>
+          </div>
+
+          <!-- Session chain (#11) -->
+          <div class="chain-section" id="chain-section">
+            <div class="chain-header">
+              <span class="chain-title">⛓ Session Chain</span>
+              <button class="btn-icon" id="chain-toggle-btn" title="Toggle chain">▾</button>
+            </div>
+            <div class="chain-body" id="chain-body">
+              <div class="chain-add-row">
+                <input type="number" id="chain-duration-input" class="setting-input" min="1" max="120" value="25" placeholder="min" style="width:60px;">
+                <input type="text" id="chain-task-input" class="task-input" placeholder="Task name…" maxlength="60" style="flex:1;text-align:left;">
+                <button class="btn btn-export" id="chain-add-btn">Add</button>
+              </div>
+              <div class="chain-list" id="chain-list"></div>
+              <div class="chain-controls" id="chain-controls">
+                <button class="btn btn-export" id="chain-start-btn">Start Chain</button>
+                <button class="btn btn-danger" id="chain-clear-btn">Clear</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Focus tip section -->
+          <div class="tip-section hidden" id="tip-section">
+            <div class="tip-header"><span>✨ Focus Tip</span></div>
+            <button class="btn btn-tip" id="get-tip-btn">Get a Focus Tip</button>
+            <div class="tip-text" id="tip-display"></div>
+          </div>
+
+          <!-- Daily challenge -->
+          <div class="challenge-card" id="challenge-card">
+            <div class="challenge-header">
+              <span class="challenge-icon">🎯</span>
+              <span class="challenge-title">Daily Challenge</span>
+              <span class="challenge-status" id="challenge-status">In progress</span>
+            </div>
+            <div class="challenge-desc" id="challenge-desc">Loading…</div>
+          </div>
+
+          <!-- Keyboard shortcuts hint -->
+          <div class="shortcuts-hint">
+            <kbd class="kbd">Space</kbd> Start/Pause
+            <kbd class="kbd">R</kbd> Reset
+            <kbd class="kbd">S</kbd> Skip
+          </div>
+
         </div>
-    </div>
-
-    <script>
-    (function() {
-        'use strict';
-
-        // ═══════════════════════════════════════════════
-        // CONSTANTS & ACHIEVEMENTS DEFINITION
-        // ═══════════════════════════════════════════════
-        const ACHIEVEMENTS = [
-            { id: 'first_session', name: 'First Step', desc: 'Complete your first session', icon: '🌱', xp: 10, check: s => s.totalSessions >= 1 },
-            { id: 'five_sessions', name: 'Getting Started', desc: 'Complete 5 sessions', icon: '🌿', xp: 25, check: s => s.totalSessions >= 5 },
-            { id: 'ten_sessions', name: 'Focused Ten', desc: 'Complete 10 sessions', icon: '🌳', xp: 50, check: s => s.totalSessions >= 10 },
-            { id: 'twenty_five', name: 'Quarter Century', desc: 'Complete 25 sessions', icon: '💪', xp: 75, check: s => s.totalSessions >= 25 },
-            { id: 'fifty_sessions', name: 'Half Century', desc: 'Complete 50 sessions', icon: '🏆', xp: 100, check: s => s.totalSessions >= 50 },
-            { id: 'hundred_sessions', name: 'Centurion', desc: 'Complete 100 sessions', icon: '👑', xp: 200, check: s => s.totalSessions >= 100 },
-            { id: 'two_fifty', name: 'Unstoppable', desc: 'Complete 250 sessions', icon: '⚡', xp: 500, check: s => s.totalSessions >= 250 },
-            { id: 'five_hundred', name: 'Legendary', desc: 'Complete 500 sessions', icon: '🔮', xp: 1000, check: s => s.totalSessions >= 500 },
-            { id: 'streak_3', name: 'Three-peat', desc: '3 day streak', icon: '🔥', xp: 30, check: s => s.bestStreak >= 3 },
-            { id: 'streak_7', name: 'Weekly Warrior', desc: '7 day streak', icon: '🗓', xp: 75, check: s => s.bestStreak >= 7 },
-            { id: 'streak_14', name: 'Fortnight Focus', desc: '14 day streak', icon: '💎', xp: 150, check: s => s.bestStreak >= 14 },
-            { id: 'streak_30', name: 'Monthly Master', desc: '30 day streak', icon: '🌟', xp: 300, check: s => s.bestStreak >= 30 },
-            { id: 'streak_100', name: 'Century Streak', desc: '100 day streak', icon: '🏅', xp: 1000, check: s => s.bestStreak >= 100 },
-            { id: 'hour_focus', name: 'Deep Diver', desc: '1 hour total focus', icon: '🤿', xp: 20, check: s => s.totalMinutes >= 60 },
-            { id: 'five_hours', name: 'Time Lord', desc: '5 hours total focus', icon: '⏰', xp: 50, check: s => s.totalMinutes >= 300 },
-            { id: 'ten_hours', name: 'Marathon Mind', desc: '10 hours total focus', icon: '🧠', xp: 100, check: s => s.totalMinutes >= 600 },
-            { id: 'fifty_hours', name: 'Mind Athlete', desc: '50 hours total focus', icon: '🏋️', xp: 300, check: s => s.totalMinutes >= 3000 },
-            { id: 'hundred_hours', name: 'Grand Master', desc: '100 hours focus', icon: '🎓', xp: 500, check: s => s.totalMinutes >= 6000 },
-            { id: 'flow_5', name: 'Flow Finder', desc: '5 flow-state sessions', icon: '🌊', xp: 50, check: s => s.flowCount >= 5 },
-            { id: 'flow_20', name: 'Flow Master', desc: '20 flow-state sessions', icon: '🌀', xp: 150, check: s => s.flowCount >= 20 },
-            { id: 'night_owl', name: 'Night Owl', desc: 'Session after midnight', icon: '🦉', xp: 25, check: s => s.nightSession },
-            { id: 'early_bird', name: 'Early Bird', desc: 'Session before 7 AM', icon: '🐦', xp: 25, check: s => s.earlySession },
-            { id: 'weekend', name: 'Weekend Warrior', desc: 'Session on weekend', icon: '🎮', xp: 20, check: s => s.weekendSession },
-            { id: 'four_in_row', name: 'Full Cycle', desc: '4 sessions in a row', icon: '🔄', xp: 40, check: s => s.maxConsecutive >= 4 },
-            { id: 'eight_day', name: 'Power Day', desc: '8 sessions in one day', icon: '⚡', xp: 100, check: s => s.maxDailySessions >= 8 },
-            { id: 'no_distraction', name: 'Laser Focus', desc: '5 sessions with 0 distractions', icon: '🎯', xp: 75, check: s => s.perfectFocusCount >= 5 },
-            { id: 'task_master', name: 'Task Master', desc: 'Complete 10 tasks', icon: '✅', xp: 50, check: s => s.completedTasks >= 10 },
-            { id: 'level_5', name: 'Rising Star', desc: 'Reach level 5', icon: '⭐', xp: 50, check: s => s.level >= 5 },
-            { id: 'level_10', name: 'Veteran', desc: 'Reach level 10', icon: '🌠', xp: 150, check: s => s.level >= 10 },
-            { id: 'level_25', name: 'Elite', desc: 'Reach level 25', icon: '💫', xp: 500, check: s => s.level >= 25 },
-        ];
-
-        const LEVEL_XP = level => Math.floor(100 * Math.pow(1.2, level - 1));
-        const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-        const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-        // ═══════════════════════════════════════════════
-        // STATE
-        // ═══════════════════════════════════════════════
-        const defaultSettings = {
-            focusDuration: 25, shortBreak: 5, longBreak: 15, sessionsPerCycle: 4,
-            dailyGoal: 4, progressive: true, growthRate: 2, maxFocus: 50,
-            autoBreak: false, autoFocus: false, countUp: false,
-            theme: 'dark', accentColor: '#6366f1',
-            notifications: true, sound: true, tickSound: false,
-            trackFocus: true, distractionLog: true, streakFreeze: false,
-        };
-
-        let state = {
-            settings: { ...defaultSettings },
-            sessions: [],
-            tasks: [],
-            achievements: [],
-            xp: 0,
-            level: 1,
-            streak: 0,
-            bestStreak: 0,
-            lastSessionDate: null,
-            streakFreezeUsed: false,
-            streakFreezeDate: null,
-        };
-
-        let timer = {
-            running: false, paused: false, mode: 'focus', secondsLeft: 0,
-            totalSeconds: 0, interval: null, sessionInCycle: 0,
-            currentSessionDistractions: 0, countingUp: false, overSeconds: 0,
-            startedAt: null, consecutiveToday: 0,
-        };
-
-        let audioCtx = null;
-        let ambientOsc = null;
-        let ambientGain = null;
-        let ambientActive = false;
-        let currentAmbientSound = null;
-
-        // ═══════════════════════════════════════════════
-        // PERSISTENCE
-        // ═══════════════════════════════════════════════
-        function saveState() {
-            try { localStorage.setItem('pp_state', JSON.stringify(state)); } catch(e) {}
-        }
-
-        function loadState() {
-            try {
-                const saved = localStorage.getItem('pp_state');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    state = { ...state, ...parsed, settings: { ...defaultSettings, ...parsed.settings } };
-                }
-            } catch(e) {}
-        }
-
-        // ═══════════════════════════════════════════════
-        // DOM HELPERS
-        // ═══════════════════════════════════════════════
-        const $ = id => document.getElementById(id);
-        const $$ = sel => document.querySelectorAll(sel);
-
-        function showToast(msg, type = 'success', duration = 3000) {
-            const c = $('toastContainer');
-            const t = document.createElement('div');
-            t.className = `toast ${type}`;
-            t.textContent = msg;
-            c.appendChild(t);
-            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(20px)'; setTimeout(() => t.remove(), 300); }, duration);
-        }
-
-        function showModal(content) {
-            $('modalContent').innerHTML = content;
-            $('modalOverlay').classList.add('open');
-        }
-
-        function closeModal() { $('modalOverlay').classList.remove('open'); }
-
-        // ═══════════════════════════════════════════════
-        // AUDIO ENGINE
-        // ═══════════════════════════════════════════════
-        function getAudioCtx() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            return audioCtx;
-        }
-
-        function playBeep(freq = 800, duration = 0.15, type = 'sine') {
-            if (!state.settings.sound) return;
-            try {
-                const ctx = getAudioCtx();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = type;
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + duration);
-            } catch(e) {}
-        }
-
-        function playCompletionSound() {
-            playBeep(523, 0.15);
-            setTimeout(() => playBeep(659, 0.15), 150);
-            setTimeout(() => playBeep(784, 0.3), 300);
-        }
-
-        function playBreakSound() {
-            playBeep(400, 0.2, 'triangle');
-            setTimeout(() => playBeep(350, 0.3, 'triangle'), 200);
-        }
-
-        function playTickSound() {
-            if (!state.settings.tickSound) return;
-            try {
-                const ctx = getAudioCtx();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = 1000;
-                gain.gain.setValueAtTime(0.05, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.03);
-            } catch(e) {}
-        }
-
-        function playXPSound() {
-            playBeep(880, 0.1);
-            setTimeout(() => playBeep(1100, 0.15), 100);
-        }
-
-        function playAchievementSound() {
-            [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playBeep(f, 0.2), i * 120));
-        }
-
-        // Ambient sound engine using oscillators and noise
-        function startAmbientSound(type) {
-            stopAmbientSound();
-            try {
-                const ctx = getAudioCtx();
-                ambientGain = ctx.createGain();
-                ambientGain.gain.value = ($('ambientVolume').value / 100) * 0.3;
-                ambientGain.connect(ctx.destination);
-
-                if (type === 'whitenoise' || type === 'rain' || type === 'wind') {
-                    const bufferSize = 2 * ctx.sampleRate;
-                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                    const source = ctx.createBufferSource();
-                    source.buffer = buffer;
-                    source.loop = true;
-                    const filter = ctx.createBiquadFilter();
-                    if (type === 'rain') { filter.type = 'bandpass'; filter.frequency.value = 2000; filter.Q.value = 0.5; }
-                    else if (type === 'wind') { filter.type = 'lowpass'; filter.frequency.value = 400; }
-                    else { filter.type = 'lowpass'; filter.frequency.value = 8000; }
-                    source.connect(filter);
-                    filter.connect(ambientGain);
-                    source.start();
-                    ambientOsc = source;
-                } else if (type === 'waves') {
-                    const bufferSize = 2 * ctx.sampleRate;
-                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) {
-                        data[i] = (Math.random() * 2 - 1) * (0.3 + 0.7 * Math.sin(i / ctx.sampleRate * 0.15 * Math.PI));
-                    }
-                    const source = ctx.createBufferSource();
-                    source.buffer = buffer;
-                    source.loop = true;
-                    const filter = ctx.createBiquadFilter();
-                    filter.type = 'lowpass';
-                    filter.frequency.value = 600;
-                    source.connect(filter);
-                    filter.connect(ambientGain);
-                    source.start();
-                    ambientOsc = source;
-                } else {
-                    // For other sounds, use oscillator combinations
-                    const osc1 = ctx.createOscillator();
-                    const osc2 = ctx.createOscillator();
-                    if (type === 'cafe') { osc1.type = 'sawtooth'; osc1.frequency.value = 100; osc2.type = 'triangle'; osc2.frequency.value = 150; }
-                    else if (type === 'fire') { osc1.type = 'sawtooth'; osc1.frequency.value = 80; osc2.type = 'square'; osc2.frequency.value = 40; }
-                    else if (type === 'forest') { osc1.type = 'sine'; osc1.frequency.value = 200; osc2.type = 'sine'; osc2.frequency.value = 280; }
-                    else if (type === 'thunder') { osc1.type = 'sawtooth'; osc1.frequency.value = 50; osc2.type = 'square'; osc2.frequency.value = 30; }
-                    else { osc1.type = 'sine'; osc1.frequency.value = 100; osc2.type = 'sine'; osc2.frequency.value = 150; }
-                    const filter = ctx.createBiquadFilter();
-                    filter.type = 'lowpass';
-                    filter.frequency.value = 300;
-                    osc1.connect(filter);
-                    osc2.connect(filter);
-                    filter.connect(ambientGain);
-                    osc1.start();
-                    osc2.start();
-                    ambientOsc = { stop: () => { osc1.stop(); osc2.stop(); } };
-                }
-                ambientActive = true;
-                currentAmbientSound = type;
-                $('ambientStatus').textContent = type.charAt(0).toUpperCase() + type.slice(1);
-            } catch(e) {}
-        }
-
-        function stopAmbientSound() {
-            try { if (ambientOsc) { ambientOsc.stop(); ambientOsc = null; } } catch(e) { ambientOsc = null; }
-            ambientActive = false;
-            currentAmbientSound = null;
-            $('ambientStatus').textContent = 'Off';
-            $$('.sound-btn').forEach(b => b.classList.remove('active'));
-        }
-
-        // ═══════════════════════════════════════════════
-        // NOTIFICATIONS
-        // ═══════════════════════════════════════════════
-        function sendNotification(title, body) {
-            if (!state.settings.notifications) return;
-            if (Notification.permission === 'granted') {
-                new Notification(title, { body, icon: '🍅', badge: '🍅', tag: 'pomodoro' });
-            } else if (Notification.permission !== 'denied') {
-                Notification.requestPermission().then(p => {
-                    if (p === 'granted') new Notification(title, { body });
-                });
-            }
-        }
-
-        // ═══════════════════════════════════════════════
-        // XP & LEVELING SYSTEM
-        // ═══════════════════════════════════════════════
-        function addXP(amount, reason) {
-            state.xp += amount;
-            let leveledUp = false;
-            while (state.xp >= xpForNextLevel()) {
-                state.xp -= xpForNextLevel();
-                state.level++;
-                leveledUp = true;
-            }
-            updateXPBar();
-            if (leveledUp) {
-                showToast(`🎉 Level ${state.level}!`, 'xp', 4000);
-                playAchievementSound();
-            } else if (reason) {
-                showToast(`+${amount} XP — ${reason}`, 'xp', 2000);
-                playXPSound();
-            }
-            saveState();
-        }
-
-        function xpForNextLevel() { return LEVEL_XP(state.level); }
-
-        function updateXPBar() {
-            const needed = xpForNextLevel();
-            const pct = Math.min(100, (state.xp / needed) * 100);
-            $('xpLevel').textContent = `Level ${state.level}`;
-            $('xpAmount').textContent = `${state.xp} / ${needed} XP`;
-            $('xpBarFill').style.width = pct + '%';
-            $('statTotalXP').textContent = getTotalXP();
-        }
-
-        function getTotalXP() {
-            let total = state.xp;
-            for (let i = 1; i < state.level; i++) total += LEVEL_XP(i);
-            return total;
-        }
-
-        // ═══════════════════════════════════════════════
-        // STREAK MANAGEMENT
-        // ═══════════════════════════════════════════════
-        function getDateStr(d) { return d ? new Date(d).toISOString().split('T')[0] : null; }
-        function todayStr() { return getDateStr(new Date()); }
-
-        function updateStreak() {
-            const today = todayStr();
-            const last = state.lastSessionDate;
-            if (!last) { state.streak = 1; }
-            else if (last === today) { /* same day, streak unchanged */ }
-            else {
-                const lastDate = new Date(last);
-                const todayDate = new Date(today);
-                const diffDays = Math.floor((todayDate - lastDate) / 86400000);
-                if (diffDays === 1) { state.streak++; }
-                else if (diffDays === 2 && state.settings.streakFreeze && !state.streakFreezeUsed) {
-                    state.streak++;
-                    state.streakFreezeUsed = true;
-                    state.streakFreezeDate = today;
-                    showToast('🧊 Streak freeze used!', 'warning');
-                }
-                else if (diffDays > 1) { state.streak = 1; }
-            }
-            state.lastSessionDate = today;
-            if (state.streak > state.bestStreak) state.bestStreak = state.streak;
-            // Reset freeze at start of new day
-            const fd = state.streakFreezeDate;
-            if (fd && fd !== today && fd !== getDateStr(new Date(Date.now() - 86400000))) {
-                state.streakFreezeUsed = false;
-            }
-        }
-
-        // ═══════════════════════════════════════════════
-        // TIMER ENGINE
-        // ═══════════════════════════════════════════════
-        function getEffectiveFocusDuration() {
-            if (!state.settings.progressive) return state.settings.focusDuration;
-            const todaySessions = getTodaySessionCount();
-            const growth = todaySessions * state.settings.growthRate;
-            return Math.min(state.settings.focusDuration + growth, state.settings.maxFocus);
-        }
-
-        function getTimerDuration() {
-            if (timer.mode === 'focus') return getEffectiveFocusDuration() * 60;
-            if (timer.mode === 'longBreak') return state.settings.longBreak * 60;
-            return state.settings.shortBreak * 60;
-        }
-
-        function startTimer() {
-            if (timer.running && !timer.paused) {
-                // Pause
-                timer.paused = true;
-                clearInterval(timer.interval);
-                updateStartButton();
-                return;
-            }
-            if (timer.paused) {
-                // Resume
-                timer.paused = false;
-                timer.interval = setInterval(tick, 1000);
-                updateStartButton();
-                return;
-            }
-            // Fresh start
-            timer.totalSeconds = getTimerDuration();
-            timer.secondsLeft = timer.totalSeconds;
-            timer.running = true;
-            timer.paused = false;
-            timer.countingUp = false;
-            timer.overSeconds = 0;
-            timer.currentSessionDistractions = 0;
-            timer.startedAt = Date.now();
-            $('distractionCount').textContent = '0';
-            if (timer.mode === 'focus' && state.settings.distractionLog) {
-                $('distractionLogger').style.display = 'block';
-            }
-            timer.interval = setInterval(tick, 1000);
-            updateStartButton();
-            $('skipBtn').style.display = 'inline-flex';
-            $('focusQuality').style.display = 'none';
-
-            // Request wake lock
-            requestWakeLock();
-
-            document.title = `${formatTime(timer.secondsLeft)} - Progressive Pomodoro`;
-        }
-
-        function tick() {
-            if (timer.countingUp) {
-                timer.overSeconds++;
-                updateDisplay();
-                document.title = `+${formatTime(timer.overSeconds)} - Progressive Pomodoro`;
-                return;
-            }
-
-            timer.secondsLeft--;
-            playTickSound();
-
-            if (timer.secondsLeft <= 0) {
-                if (state.settings.countUp && timer.mode === 'focus') {
-                    timer.countingUp = true;
-                    timer.overSeconds = 0;
-                    showToast('⏱ Timer complete! Counting up...', 'success');
-                    playCompletionSound();
-                    return;
-                }
-                clearInterval(timer.interval);
-                timerComplete();
-                return;
-            }
-
-            updateDisplay();
-            document.title = `${formatTime(timer.secondsLeft)} - ${timer.mode === 'focus' ? 'Focus' : 'Break'} - Pomodoro`;
-        }
-
-        function timerComplete() {
-            timer.running = false;
-            timer.paused = false;
-            timer.countingUp = false;
-
-            if (timer.mode === 'focus') {
-                // Complete focus session
-                const duration = Math.round((timer.totalSeconds + timer.overSeconds) / 60);
-                playCompletionSound();
-                sendNotification('Focus session complete!', `Great work! ${duration} minutes of focus.`);
-
-                // Show focus quality rating
-                if (state.settings.trackFocus) {
-                    $('focusQuality').style.display = 'flex';
-                } else {
-                    recordSession(duration, 'focused');
-                }
-
-                timer.consecutiveToday++;
-                timer.sessionInCycle++;
-
-                updateSessionDots();
-            } else {
-                // Break complete
-                playBreakSound();
-                sendNotification('Break over!', 'Ready to focus again?');
-
-                if (state.settings.autoFocus) {
-                    timer.mode = 'focus';
-                    updateTimerMode();
-                    setTimeout(startTimer, 1000);
-                    return;
-                }
-            }
-
-            $('skipBtn').style.display = 'none';
-            $('distractionLogger').style.display = 'none';
-            updateStartButton();
-            updateDisplay();
-            document.title = 'Progressive Pomodoro';
-            releaseWakeLock();
-        }
-
-        function recordSession(duration, quality) {
-            const session = {
-                id: Date.now(),
-                date: new Date().toISOString(),
-                duration,
-                quality,
-                task: $('taskInput').value.trim() || 'Untitled',
-                distractions: timer.currentSessionDistractions,
-                mode: 'focus',
-            };
-
-            state.sessions.push(session);
-            updateStreak();
-
-            // XP calculation
-            let xp = duration; // 1 XP per minute
-            if (quality === 'flow') xp = Math.round(xp * 2);
-            else if (quality === 'focused') xp = Math.round(xp * 1.5);
-            else if (quality === 'distracted') xp = Math.round(xp * 0.5);
-            if (state.streak >= 7) xp = Math.round(xp * 1.25); // streak bonus
-            addXP(xp, `${duration}min focus`);
-
-            // Check achievements
-            checkAchievements();
-
-            $('focusQuality').style.display = 'none';
-            saveState();
-            updateAllStats();
-
-            // Transition to break
-            if (timer.sessionInCycle >= state.settings.sessionsPerCycle) {
-                timer.mode = 'longBreak';
-                timer.sessionInCycle = 0;
-            } else {
-                timer.mode = 'shortBreak';
-            }
-            updateTimerMode();
-
-            if (state.settings.autoBreak) {
-                setTimeout(startTimer, 1000);
-            }
-        }
-
-        function skipTimer() {
-            clearInterval(timer.interval);
-            timer.running = false;
-            timer.paused = false;
-            timer.countingUp = false;
-
-            if (timer.mode === 'focus') {
-                // Skipping focus = no credit
-                timer.mode = 'focus';
-            } else {
-                // Skip break
-                timer.mode = 'focus';
-            }
-            $('skipBtn').style.display = 'none';
-            $('distractionLogger').style.display = 'none';
-            $('focusQuality').style.display = 'none';
-            updateTimerMode();
-            updateStartButton();
-            updateDisplay();
-            document.title = 'Progressive Pomodoro';
-            releaseWakeLock();
-        }
-
-        function resetTimer() {
-            clearInterval(timer.interval);
-            timer.running = false;
-            timer.paused = false;
-            timer.countingUp = false;
-            timer.overSeconds = 0;
-            timer.mode = 'focus';
-            timer.sessionInCycle = 0;
-            timer.currentSessionDistractions = 0;
-            $('skipBtn').style.display = 'none';
-            $('distractionLogger').style.display = 'none';
-            $('focusQuality').style.display = 'none';
-            updateTimerMode();
-            updateStartButton();
-            updateDisplay();
-            updateSessionDots();
-            document.title = 'Progressive Pomodoro';
-            releaseWakeLock();
-        }
-
-        // ═══════════════════════════════════════════════
-        // DISPLAY UPDATES
-        // ═══════════════════════════════════════════════
-        function formatTime(s) {
-            const m = Math.floor(Math.abs(s) / 60);
-            const sec = Math.abs(s) % 60;
-            return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-        }
-
-        function updateDisplay() {
-            const display = timer.countingUp
-                ? '+' + formatTime(timer.overSeconds)
-                : formatTime(timer.running ? timer.secondsLeft : getTimerDuration());
-            $('timerDisplay').textContent = display;
-
-            // Ring progress
-            const circumference = 2 * Math.PI * 45;
-            let progress;
-            if (timer.countingUp) { progress = 0; }
-            else if (timer.running) { progress = 1 - (timer.secondsLeft / timer.totalSeconds); }
-            else { progress = 0; }
-            const offset = circumference * (1 - progress);
-            const ring = $('ringProgress');
-            ring.style.strokeDasharray = circumference;
-            ring.style.strokeDashoffset = offset;
-
-            if (timer.mode !== 'focus') ring.classList.add('break-mode');
-            else ring.classList.remove('break-mode');
-
-            // Pulse effect during focus
-            if (timer.running && timer.mode === 'focus') ring.classList.add('focus-pulse');
-            else ring.classList.remove('focus-pulse');
-        }
-
-        function updateTimerMode() {
-            const modeEl = $('timerMode');
-            const modeMap = { focus: '⏱ Focus', shortBreak: '☕ Short Break', longBreak: '🧘 Long Break' };
-            modeEl.innerHTML = modeMap[timer.mode] || '⏱ Focus';
-
-            const nextInfo = $('timerNextInfo');
-            if (timer.mode === 'focus') {
-                const effective = getEffectiveFocusDuration();
-                nextInfo.textContent = `Session ${timer.sessionInCycle + 1} of ${state.settings.sessionsPerCycle} · ${effective}min`;
-            } else {
-                nextInfo.textContent = timer.mode === 'longBreak' ? 'Long break - you earned it!' : 'Short break - recharge!';
-            }
-            updateDisplay();
-        }
-
-        function updateStartButton() {
-            const btn = $('startBtn');
-            if (timer.running && !timer.paused) {
-                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pause';
-            } else if (timer.paused) {
-                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Resume';
-            } else {
-                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Start';
-            }
-            if (timer.mode !== 'focus') btn.classList.add('break-mode');
-            else btn.classList.remove('break-mode');
-        }
-
-        function updateSessionDots() {
-            const container = $('sessionDots');
-            container.innerHTML = '';
-            for (let i = 0; i < state.settings.sessionsPerCycle; i++) {
-                const dot = document.createElement('div');
-                dot.className = 'session-dot';
-                if (i < timer.sessionInCycle) dot.classList.add('completed');
-                else if (i === timer.sessionInCycle && timer.running && timer.mode === 'focus') dot.classList.add('current');
-                container.appendChild(dot);
-            }
-        }
-
-        // ═══════════════════════════════════════════════
-        // STATS CALCULATIONS
-        // ═══════════════════════════════════════════════
-        function getTodaySessionCount() {
-            const today = todayStr();
-            return state.sessions.filter(s => getDateStr(s.date) === today).length;
-        }
-
-        function getWeekSessions() {
-            const now = new Date();
-            const weekStart = new Date(now);
-            weekStart.setDate(now.getDate() - now.getDay());
-            weekStart.setHours(0, 0, 0, 0);
-            return state.sessions.filter(s => new Date(s.date) >= weekStart);
-        }
-
-        function getMonthSessions() {
-            const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            return state.sessions.filter(s => new Date(s.date) >= monthStart);
-        }
-
-        function updateAllStats() {
-            // Top bar
-            $('streakCount').textContent = state.streak;
-            $('todayCount').textContent = getTodaySessionCount();
-            $('totalCount').textContent = state.sessions.length;
-
-            // Daily goal
-            const todayCount = getTodaySessionCount();
-            const goal = state.settings.dailyGoal;
-            $('goalProgress').textContent = `${todayCount} / ${goal} sessions`;
-            $('goalFill').style.width = Math.min(100, (todayCount / goal) * 100) + '%';
-
-            updateXPBar();
-        }
-
-        function updateStatsPage() {
-            const totalMin = state.sessions.reduce((sum, s) => sum + s.duration, 0);
-            const hours = Math.floor(totalMin / 60);
-            const mins = totalMin % 60;
-            $('statTotalTime').textContent = `${hours}h ${mins}m`;
-            $('statTotalSessions').textContent = state.sessions.length;
-            $('statBestStreak').textContent = state.bestStreak;
-
-            const focusQualities = state.sessions.filter(s => s.quality).map(s => {
-                if (s.quality === 'flow') return 4;
-                if (s.quality === 'focused') return 3;
-                if (s.quality === 'okay') return 2;
-                return 1;
-            });
-            const avg = focusQualities.length > 0
-                ? (focusQualities.reduce((a, b) => a + b, 0) / focusQualities.length).toFixed(1)
-                : '--';
-            $('statAvgFocus').textContent = avg === '--' ? avg : ['', 'Low', 'Med', 'Good', 'Great'][Math.round(parseFloat(avg))] || avg;
-
-            $('statThisWeek').textContent = getWeekSessions().length;
-            $('statThisMonth').textContent = getMonthSessions().length;
-            $('statTotalXP').textContent = getTotalXP();
-
-            const totalDistractions = state.sessions.reduce((sum, s) => sum + (s.distractions || 0), 0);
-            $('statDistractions').textContent = totalDistractions;
-
-            // Productivity score
-            const consistency = Math.min(1, state.streak / 14);
-            const volume = Math.min(1, state.sessions.length / 50);
-            const qualityScore = focusQualities.length > 0 ? focusQualities.reduce((a, b) => a + b, 0) / focusQualities.length / 4 : 0;
-            const score = Math.round((consistency * 0.4 + volume * 0.3 + qualityScore * 0.3) * 100);
-            $('productivityScore').textContent = score;
-
-            renderWeeklyChart();
-            renderHeatmap();
-            renderHourlyChart();
-            renderQualityBreakdown();
-        }
-
-        function renderWeeklyChart() {
-            const chart = $('weeklyChart');
-            chart.innerHTML = '';
-            const now = new Date();
-            const dayData = [];
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date(now);
-                d.setDate(d.getDate() - i);
-                const ds = getDateStr(d);
-                const count = state.sessions.filter(s => getDateStr(s.date) === ds).length;
-                dayData.push({ label: DAYS[d.getDay()], count, date: ds });
-            }
-            const max = Math.max(1, ...dayData.map(d => d.count));
-            dayData.forEach(d => {
-                const col = document.createElement('div');
-                col.className = 'bar-col';
-                const bar = document.createElement('div');
-                bar.className = 'bar';
-                bar.style.height = Math.max(2, (d.count / max) * 100) + 'px';
-                const tip = document.createElement('div');
-                tip.className = 'bar-tooltip';
-                tip.textContent = `${d.count} sessions`;
-                bar.appendChild(tip);
-                const label = document.createElement('div');
-                label.className = 'bar-label';
-                label.textContent = d.label;
-                col.appendChild(bar);
-                col.appendChild(label);
-                chart.appendChild(col);
-            });
-
-            $('weekLabel').textContent = `${dayData[0].date} — ${dayData[6].date}`;
-        }
-
-        function renderHeatmap() {
-            const heatmap = $('heatmap');
-            heatmap.innerHTML = '';
-            const now = new Date();
-            const oneYearAgo = new Date(now);
-            oneYearAgo.setFullYear(now.getFullYear() - 1);
-
-            // Count sessions per day
-            const dayCounts = {};
-            state.sessions.forEach(s => {
-                const d = getDateStr(s.date);
-                dayCounts[d] = (dayCounts[d] || 0) + 1;
-            });
-
-            const maxCount = Math.max(1, ...Object.values(dayCounts));
-            const current = new Date(oneYearAgo);
-            // Align to start of week
-            current.setDate(current.getDate() - current.getDay());
-
-            while (current <= now) {
-                const ds = getDateStr(current);
-                const count = dayCounts[ds] || 0;
-                const cell = document.createElement('div');
-                cell.className = 'heatmap-cell';
-                if (count > 0) {
-                    const level = Math.ceil((count / maxCount) * 5);
-                    cell.classList.add('l' + Math.min(5, level));
-                }
-                cell.title = `${ds}: ${count} sessions`;
-                heatmap.appendChild(cell);
-                current.setDate(current.getDate() + 1);
-            }
-        }
-
-        function renderHourlyChart() {
-            const chart = $('hourlyChart');
-            chart.innerHTML = '';
-            const hourCounts = new Array(24).fill(0);
-            state.sessions.forEach(s => {
-                const h = new Date(s.date).getHours();
-                hourCounts[h]++;
-            });
-            const max = Math.max(1, ...hourCounts);
-            // Show every 3 hours
-            for (let h = 0; h < 24; h += 1) {
-                const col = document.createElement('div');
-                col.className = 'bar-col';
-                const bar = document.createElement('div');
-                bar.className = 'bar';
-                bar.style.height = Math.max(2, (hourCounts[h] / max) * 100) + 'px';
-                bar.style.background = 'var(--accent-break)';
-                const tip = document.createElement('div');
-                tip.className = 'bar-tooltip';
-                tip.textContent = `${h}:00 - ${hourCounts[h]}`;
-                bar.appendChild(tip);
-                if (h % 4 === 0) {
-                    const label = document.createElement('div');
-                    label.className = 'bar-label';
-                    label.textContent = `${h}`;
-                    col.appendChild(bar);
-                    col.appendChild(label);
-                } else {
-                    col.appendChild(bar);
-                }
-                chart.appendChild(col);
-            }
-        }
-
-        function renderQualityBreakdown() {
-            const container = $('qualityBreakdown');
-            const counts = { flow: 0, focused: 0, okay: 0, distracted: 0 };
-            state.sessions.forEach(s => { if (s.quality && counts[s.quality] !== undefined) counts[s.quality]++; });
-            const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
-            const colors = { flow: 'var(--accent-flow)', focused: 'var(--accent-break)', okay: 'var(--accent-warning)', distracted: 'var(--accent-danger)' };
-            const labels = { flow: '🔥 Flow', focused: '🎯 Focused', okay: '😊 Okay', distracted: '😵‍💫 Distracted' };
-
-            container.innerHTML = Object.entries(counts).map(([key, count]) => {
-                const pct = Math.round((count / total) * 100);
-                return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-                    <span style="font-size:0.75rem;width:90px">${labels[key]}</span>
-                    <div style="flex:1;height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden">
-                        <div style="height:100%;width:${pct}%;background:${colors[key]};border-radius:4px;transition:width 0.5s"></div>
-                    </div>
-                    <span style="font-size:0.7rem;color:var(--text-muted);width:40px;text-align:right">${count} (${pct}%)</span>
-                </div>`;
-            }).join('');
-        }
-
-        // ═══════════════════════════════════════════════
-        // ACHIEVEMENTS
-        // ═══════════════════════════════════════════════
-        function getAchievementStats() {
-            const flowCount = state.sessions.filter(s => s.quality === 'flow').length;
-            const nightSession = state.sessions.some(s => new Date(s.date).getHours() >= 0 && new Date(s.date).getHours() < 5);
-            const earlySession = state.sessions.some(s => new Date(s.date).getHours() >= 4 && new Date(s.date).getHours() < 7);
-            const weekendSession = state.sessions.some(s => { const d = new Date(s.date).getDay(); return d === 0 || d === 6; });
-            const totalMinutes = state.sessions.reduce((sum, s) => sum + s.duration, 0);
-            const perfectFocusCount = state.sessions.filter(s => (s.distractions || 0) === 0).length;
-            const completedTasks = state.tasks.filter(t => t.completed).length;
-
-            // Max consecutive sessions (same day, within 2 hours of each other)
-            let maxConsecutive = 0;
-            let current = 0;
-            const sorted = [...state.sessions].sort((a, b) => new Date(a.date) - new Date(b.date));
-            for (let i = 0; i < sorted.length; i++) {
-                if (i === 0) { current = 1; continue; }
-                const diff = (new Date(sorted[i].date) - new Date(sorted[i-1].date)) / 60000;
-                if (diff < 120) { current++; } else { current = 1; }
-                maxConsecutive = Math.max(maxConsecutive, current);
-            }
-
-            // Max daily sessions
-            const dailyCounts = {};
-            state.sessions.forEach(s => {
-                const d = getDateStr(s.date);
-                dailyCounts[d] = (dailyCounts[d] || 0) + 1;
-            });
-            const maxDailySessions = Math.max(0, ...Object.values(dailyCounts));
-
-            return {
-                totalSessions: state.sessions.length,
-                bestStreak: state.bestStreak,
-                totalMinutes,
-                flowCount,
-                nightSession,
-                earlySession,
-                weekendSession,
-                maxConsecutive,
-                maxDailySessions,
-                perfectFocusCount,
-                completedTasks,
-                level: state.level,
-            };
-        }
-
-        function checkAchievements() {
-            const stats = getAchievementStats();
-            ACHIEVEMENTS.forEach(ach => {
-                if (!state.achievements.includes(ach.id) && ach.check(stats)) {
-                    state.achievements.push(ach.id);
-                    showToast(`🏆 Achievement: ${ach.name}!`, 'warning', 4000);
-                    playAchievementSound();
-                    addXP(ach.xp, ach.name);
-                }
-            });
-            saveState();
-        }
-
-        function renderAchievements() {
-            const grid = $('achievementGrid');
-            grid.innerHTML = ACHIEVEMENTS.map(ach => {
-                const unlocked = state.achievements.includes(ach.id);
-                return `<div class="achievement-card ${unlocked ? 'unlocked' : 'locked'}">
-                    <div class="ach-icon">${ach.icon}</div>
-                    <div class="ach-name">${ach.name}</div>
-                    <div class="ach-desc">${ach.desc}</div>
-                    <div class="ach-xp">${unlocked ? '✓ ' : ''}${ach.xp} XP</div>
-                </div>`;
-            }).join('');
-            $('achievementCount').textContent = `${state.achievements.length}/${ACHIEVEMENTS.length} unlocked`;
-        }
-
-        // ═══════════════════════════════════════════════
-        // TASKS
-        // ═══════════════════════════════════════════════
-        function addTask(name, priority = 'medium') {
-            if (!name.trim()) return;
-            state.tasks.push({
-                id: Date.now(),
-                name: name.trim(),
-                priority,
-                completed: false,
-                pomodoros: 0,
-                createdAt: new Date().toISOString(),
-            });
-            saveState();
-            renderTasks();
-        }
-
-        function toggleTask(id) {
-            const task = state.tasks.find(t => t.id === id);
-            if (task) {
-                task.completed = !task.completed;
-                if (task.completed) {
-                    addXP(5, 'Task completed');
-                    checkAchievements();
-                }
-                saveState();
-                renderTasks();
-            }
-        }
-
-        function deleteTask(id) {
-            state.tasks = state.tasks.filter(t => t.id !== id);
-            saveState();
-            renderTasks();
-        }
-
-        function renderTasks(filter = 'all') {
-            const list = $('taskList');
-            let tasks = [...state.tasks];
-
-            if (filter === 'active') tasks = tasks.filter(t => !t.completed);
-            else if (filter === 'completed') tasks = tasks.filter(t => t.completed);
-            else if (filter === 'high') tasks = tasks.filter(t => t.priority === 'high' && !t.completed);
-
-            // Sort: uncompleted first, then by priority
-            const priorityOrder = { high: 0, medium: 1, low: 2 };
-            tasks.sort((a, b) => {
-                if (a.completed !== b.completed) return a.completed ? 1 : -1;
-                return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
-            });
-
-            list.innerHTML = tasks.map(t => `
-                <li class="task-item ${t.completed ? 'completed' : ''}" data-id="${t.id}">
-                    <div class="task-priority ${t.priority}"></div>
-                    <div class="task-checkbox" onclick="window.app.toggleTask(${t.id})">${t.completed ? '✓' : ''}</div>
-                    <span class="task-name" onclick="window.app.selectTask('${t.name.replace(/'/g, "\\'")}')">${t.name}</span>
-                    <span class="task-pomos">${t.pomodoros}🍅</span>
-                    <button class="btn-icon" onclick="window.app.deleteTask(${t.id})" aria-label="Delete task" style="padding:4px;border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem">×</button>
-                </li>
-            `).join('');
-
-            if (tasks.length === 0) {
-                list.innerHTML = '<div style="text-align:center;padding:30px 0;color:var(--text-muted);font-size:0.85rem">No tasks yet. Add one above!</div>';
-            }
-        }
-
-        function selectTask(name) {
-            $('taskInput').value = name;
-            navigateTo('timerPage');
-            showToast(`Selected: ${name}`, 'success', 1500);
-        }
-
-        function incrementTaskPomodoros() {
-            const taskName = $('taskInput').value.trim();
-            if (!taskName) return;
-            const task = state.tasks.find(t => t.name === taskName && !t.completed);
-            if (task) {
-                task.pomodoros++;
-                saveState();
-            }
-        }
-
-        // ═══════════════════════════════════════════════
-        // HISTORY
-        // ═══════════════════════════════════════════════
-        function renderHistory() {
-            const container = $('historyList');
-            const empty = $('historyEmpty');
-            if (state.sessions.length === 0) {
-                container.innerHTML = '';
-                empty.style.display = 'block';
-                return;
-            }
-            empty.style.display = 'none';
-
-            // Group by date
-            const groups = {};
-            [...state.sessions].reverse().forEach(s => {
-                const d = getDateStr(s.date);
-                if (!groups[d]) groups[d] = [];
-                groups[d].push(s);
-            });
-
-            let html = '';
-            const today = todayStr();
-            const yesterday = getDateStr(new Date(Date.now() - 86400000));
-
-            Object.entries(groups).forEach(([date, sessions]) => {
-                let label = date;
-                if (date === today) label = 'Today';
-                else if (date === yesterday) label = 'Yesterday';
-                else {
-                    const d = new Date(date);
-                    label = `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-                }
-
-                html += `<div class="history-group-header">${label} · ${sessions.length} session${sessions.length > 1 ? 's' : ''}</div>`;
-                sessions.forEach(s => {
-                    const time = new Date(s.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const qualityEmoji = { flow: '🔥', focused: '🎯', okay: '😊', distracted: '😵‍💫' }[s.quality] || '';
-                    html += `<div class="history-item">
-                        <div class="history-icon work">🍅</div>
-                        <div class="history-details">
-                            <div class="history-task">${s.task || 'Untitled'}</div>
-                            <div class="history-meta">${time} ${qualityEmoji} ${s.distractions ? `· ${s.distractions} distractions` : ''}</div>
-                        </div>
-                        <div class="history-duration">${s.duration}m</div>
-                    </div>`;
-                });
-            });
-
-            container.innerHTML = html;
-        }
-
-        // ═══════════════════════════════════════════════
-        // NAVIGATION
-        // ═══════════════════════════════════════════════
-        function navigateTo(pageId) {
-            $$('.page').forEach(p => p.classList.remove('active'));
-            $(pageId).classList.add('active');
-            $$('.bottom-nav-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector(`[data-page="${pageId}"]`)?.classList.add('active');
-
-            // Refresh page data
-            if (pageId === 'historyPage') renderHistory();
-            if (pageId === 'statsPage') updateStatsPage();
-            if (pageId === 'achievementsPage') renderAchievements();
-            if (pageId === 'tasksPage') renderTasks();
-        }
-
-        // ═══════════════════════════════════════════════
-        // SETTINGS
-        // ═══════════════════════════════════════════════
-        function loadSettings() {
-            const s = state.settings;
-            $('setFocusDuration').value = s.focusDuration;
-            $('setShortBreak').value = s.shortBreak;
-            $('setLongBreak').value = s.longBreak;
-            $('setSessions').value = s.sessionsPerCycle;
-            $('setDailyGoal').value = s.dailyGoal;
-            $('setProgressive').checked = s.progressive;
-            $('setGrowthRate').value = s.growthRate;
-            $('setMaxFocus').value = s.maxFocus;
-            $('setAutoBreak').checked = s.autoBreak;
-            $('setAutoFocus').checked = s.autoFocus;
-            $('setCountUp').checked = s.countUp;
-            $('setTheme').value = s.theme;
-            $('setNotifications').checked = s.notifications;
-            $('setSound').checked = s.sound;
-            $('setTickSound').checked = s.tickSound;
-            $('setTrackFocus').checked = s.trackFocus;
-            $('setDistractionLog').checked = s.distractionLog;
-            $('setStreakFreeze').checked = s.streakFreeze;
-            applyTheme(s.theme);
-            applyAccentColor(s.accentColor);
-        }
-
-        function saveSettings() {
-            const s = state.settings;
-            s.focusDuration = parseInt($('setFocusDuration').value) || 25;
-            s.shortBreak = parseInt($('setShortBreak').value) || 5;
-            s.longBreak = parseInt($('setLongBreak').value) || 15;
-            s.sessionsPerCycle = parseInt($('setSessions').value) || 4;
-            s.dailyGoal = parseInt($('setDailyGoal').value) || 4;
-            s.progressive = $('setProgressive').checked;
-            s.growthRate = parseInt($('setGrowthRate').value) || 2;
-            s.maxFocus = parseInt($('setMaxFocus').value) || 50;
-            s.autoBreak = $('setAutoBreak').checked;
-            s.autoFocus = $('setAutoFocus').checked;
-            s.countUp = $('setCountUp').checked;
-            s.theme = $('setTheme').value;
-            s.notifications = $('setNotifications').checked;
-            s.sound = $('setSound').checked;
-            s.tickSound = $('setTickSound').checked;
-            s.trackFocus = $('setTrackFocus').checked;
-            s.distractionLog = $('setDistractionLog').checked;
-            s.streakFreeze = $('setStreakFreeze').checked;
-            saveState();
-            if (!timer.running) {
-                updateTimerMode();
-                updateDisplay();
-                updateSessionDots();
-            }
-            updateAllStats();
-        }
-
-        function applyTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            const themeColors = { dark: '#0a0a0f', light: '#f5f5f7', solarized: '#002b36', nord: '#2e3440' };
-            document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColors[theme] || '#0a0a0f');
-        }
-
-        function applyAccentColor(color) {
-            document.documentElement.style.setProperty('--accent-work', color);
-            document.documentElement.style.setProperty('--accent-work-glow', color + '4d');
-            state.settings.accentColor = color;
-            $$('.color-swatch').forEach(s => s.classList.toggle('active', s.dataset.color === color));
-            saveState();
-        }
-
-        // ═══════════════════════════════════════════════
-        // DATA EXPORT / IMPORT
-        // ═══════════════════════════════════════════════
-        function exportData() {
-            const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `pomodoro-data-${todayStr()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('Data exported!', 'success');
-        }
-
-        function importData(file) {
-            const reader = new FileReader();
-            reader.onload = e => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data.sessions && data.settings) {
-                        state = { ...state, ...data, settings: { ...defaultSettings, ...data.settings } };
-                        saveState();
-                        loadSettings();
-                        updateAllStats();
-                        showToast('Data imported!', 'success');
-                    } else {
-                        showToast('Invalid file format', 'warning');
-                    }
-                } catch(e) { showToast('Failed to import', 'warning'); }
-            };
-            reader.readAsText(file);
-        }
-
-        function exportCSV() {
-            const rows = [['Date', 'Time', 'Task', 'Duration (min)', 'Quality', 'Distractions']];
-            state.sessions.forEach(s => {
-                const d = new Date(s.date);
-                rows.push([
-                    getDateStr(s.date),
-                    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    `"${(s.task || '').replace(/"/g, '""')}"`,
-                    s.duration,
-                    s.quality || '',
-                    s.distractions || 0
-                ]);
-            });
-            const csv = rows.map(r => r.join(',')).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `pomodoro-history-${todayStr()}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('History exported as CSV!', 'success');
-        }
-
-        function resetAllData() {
-            if (confirm('Are you sure? This will delete ALL your data including sessions, achievements, and progress. This cannot be undone.')) {
-                localStorage.removeItem('pp_state');
-                location.reload();
-            }
-        }
-
-        // ═══════════════════════════════════════════════
-        // WAKE LOCK (keep screen on during sessions)
-        // ═══════════════════════════════════════════════
-        let wakeLock = null;
-        async function requestWakeLock() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                }
-            } catch(e) {}
-        }
-        function releaseWakeLock() {
-            try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch(e) {}
-        }
-
-        // ═══════════════════════════════════════════════
-        // KEYBOARD SHORTCUTS
-        // ═══════════════════════════════════════════════
-        function handleKeyboard(e) {
-            // Don't trigger when typing in inputs
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-
-            switch(e.key.toLowerCase()) {
-                case ' ':
-                    e.preventDefault();
-                    startTimer();
-                    break;
-                case 'r':
-                    resetTimer();
-                    break;
-                case 's':
-                    if (timer.running) skipTimer();
-                    break;
-                case 'z':
-                    document.body.classList.toggle('zen-mode');
-                    showToast(document.body.classList.contains('zen-mode') ? 'Zen mode on' : 'Zen mode off', 'success', 1500);
-                    break;
-                case 'd':
-                    if (timer.running && timer.mode === 'focus') {
-                        timer.currentSessionDistractions++;
-                        $('distractionCount').textContent = timer.currentSessionDistractions;
-                    }
-                    break;
-                case '1': navigateTo('timerPage'); break;
-                case '2': navigateTo('tasksPage'); break;
-                case '3': navigateTo('historyPage'); break;
-                case '4': navigateTo('statsPage'); break;
-                case '5': navigateTo('achievementsPage'); break;
-                case '6': navigateTo('settingsPage'); break;
-            }
-        }
-
-        // ═══════════════════════════════════════════════
-        // MOTIVATIONAL QUOTES
-        // ═══════════════════════════════════════════════
-        const QUOTES = [
-            'Focus is the art of knowing what to ignore.',
-            'Deep work is the superpower of the 21st century.',
-            'The secret of getting ahead is getting started.',
-            'What you do today can improve all your tomorrows.',
-            'Discipline is choosing between what you want now and what you want most.',
-            'Small daily improvements over time lead to stunning results.',
-            'Don\'t count the days, make the days count.',
-            'Your focus determines your reality.',
-            'The only way to do great work is to love what you do.',
-            'Consistency is the mother of mastery.',
-            'Grow your focus, one session at a time.',
-            'Every session is a seed planted for future success.',
-        ];
-
-        function setRandomQuote() {
-            $('headerSubtitle').textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-        }
-
-        // ═══════════════════════════════════════════════
-        // SERVICE WORKER REGISTRATION (PWA)
-        // ═══════════════════════════════════════════════
-        function registerSW() {
-            if ('serviceWorker' in navigator) {
-                // Create inline service worker
-                const swCode = `
-                    self.addEventListener('install', e => self.skipWaiting());
-                    self.addEventListener('activate', e => e.waitUntil(clients.claim()));
-                    self.addEventListener('fetch', e => {
-                        e.respondWith(
-                            caches.match(e.request).then(r => r || fetch(e.request).then(response => {
-                                if (response.status === 200) {
-                                    const clone = response.clone();
-                                    caches.open('pp-v2').then(cache => cache.put(e.request, clone));
-                                }
-                                return response;
-                            }).catch(() => caches.match(e.request)))
-                        );
-                    });
-                `;
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(blob);
-                navigator.serviceWorker.register(swUrl).catch(() => {});
-            }
-        }
-
-        // ═══════════════════════════════════════════════
-        // INITIALIZATION & EVENT BINDING
-        // ═══════════════════════════════════════════════
-        function init() {
-            loadState();
-            loadSettings();
-            updateAllStats();
-            updateTimerMode();
-            updateDisplay();
-            updateSessionDots();
-            setRandomQuote();
-
-            // Check streak on load
-            const today = todayStr();
-            const last = state.lastSessionDate;
-            if (last && last !== today) {
-                const diffDays = Math.floor((new Date(today) - new Date(last)) / 86400000);
-                if (diffDays > 1 && !(diffDays === 2 && state.settings.streakFreeze && !state.streakFreezeUsed)) {
-                    state.streak = 0;
-                    saveState();
-                }
-            }
-            updateAllStats();
-
-            // Request notification permission
-            if (state.settings.notifications && 'Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
-            }
-
-            // PWA
-            registerSW();
-
-            // Visibility change - pause tick sound when hidden
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden && timer.running) {
-                    document.title = `${timer.mode === 'focus' ? '🍅' : '☕'} ${formatTime(timer.secondsLeft)} - Pomodoro`;
-                }
-            });
-
-            // Before unload warning
-            window.addEventListener('beforeunload', e => {
-                if (timer.running) {
-                    e.preventDefault();
-                    e.returnValue = '';
-                }
-            });
-
-            // Event listeners
-            $('startBtn').addEventListener('click', startTimer);
-            $('skipBtn').addEventListener('click', skipTimer);
-            $('resetBtn').addEventListener('click', resetTimer);
-
-            // Focus quality buttons
-            $$('.focus-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const quality = btn.dataset.quality;
-                    $$('.focus-btn').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                    const duration = Math.round((timer.totalSeconds + timer.overSeconds) / 60);
-                    incrementTaskPomodoros();
-                    recordSession(duration, quality);
-                });
-            });
-
-            // Bottom nav
-            $$('.bottom-nav-btn').forEach(btn => {
-                btn.addEventListener('click', () => navigateTo(btn.dataset.page));
-            });
-
-            // Ambient sounds
-            $('ambientToggle').addEventListener('click', () => {
-                $('ambientPanel').classList.toggle('open');
-            });
-
-            $$('.sound-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const sound = btn.dataset.sound;
-                    if (currentAmbientSound === sound) {
-                        stopAmbientSound();
-                    } else {
-                        $$('.sound-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        startAmbientSound(sound);
-                    }
-                });
-            });
-
-            $('ambientVolume').addEventListener('input', e => {
-                if (ambientGain) ambientGain.gain.value = (e.target.value / 100) * 0.3;
-            });
-
-            // Distraction logger
-            $('logDistractionBtn').addEventListener('click', () => {
-                timer.currentSessionDistractions++;
-                $('distractionCount').textContent = timer.currentSessionDistractions;
-                playBeep(200, 0.1);
-            });
-
-            // Tasks
-            $('addTaskBtn').addEventListener('click', () => {
-                addTask($('newTaskInput').value, $('newTaskPriority').value);
-                $('newTaskInput').value = '';
-            });
-            $('newTaskInput').addEventListener('keydown', e => {
-                if (e.key === 'Enter') {
-                    addTask($('newTaskInput').value, $('newTaskPriority').value);
-                    $('newTaskInput').value = '';
-                }
-            });
-
-            $$('.filter-chip').forEach(chip => {
-                chip.addEventListener('click', () => {
-                    $$('.filter-chip').forEach(c => c.classList.remove('active'));
-                    chip.classList.add('active');
-                    renderTasks(chip.dataset.filter);
-                });
-            });
-
-            $('clearCompletedBtn').addEventListener('click', () => {
-                state.tasks = state.tasks.filter(t => !t.completed);
-                saveState();
-                renderTasks();
-                showToast('Completed tasks cleared', 'success');
-            });
-
-            // Settings change handlers
-            const settingInputs = [
-                'setFocusDuration', 'setShortBreak', 'setLongBreak', 'setSessions',
-                'setDailyGoal', 'setProgressive', 'setGrowthRate', 'setMaxFocus',
-                'setAutoBreak', 'setAutoFocus', 'setCountUp',
-                'setNotifications', 'setSound', 'setTickSound',
-                'setTrackFocus', 'setDistractionLog', 'setStreakFreeze',
-            ];
-            settingInputs.forEach(id => {
-                $(id).addEventListener('change', saveSettings);
-            });
-
-            $('setTheme').addEventListener('change', () => {
-                applyTheme($('setTheme').value);
-                saveSettings();
-            });
-
-            // Color swatches
-            $$('.color-swatch').forEach(swatch => {
-                swatch.addEventListener('click', () => {
-                    applyAccentColor(swatch.dataset.color);
-                });
-            });
-
-            // Data buttons
-            $('exportDataBtn').addEventListener('click', exportData);
-            $('importDataBtn').addEventListener('click', () => $('importFileInput').click());
-            $('importFileInput').addEventListener('change', e => {
-                if (e.target.files[0]) importData(e.target.files[0]);
-            });
-            $('resetDataBtn').addEventListener('click', resetAllData);
-            $('exportHistoryBtn').addEventListener('click', exportCSV);
-
-            // Modal
-            $('modalClose').addEventListener('click', closeModal);
-            $('modalOverlay').addEventListener('click', e => { if (e.target === $('modalOverlay')) closeModal(); });
-
-            // Keyboard shortcuts
-            document.addEventListener('keydown', handleKeyboard);
-
-            // Rotate quotes periodically
-            setInterval(setRandomQuote, 60000);
-
-            // Auto-save every 30 seconds
-            setInterval(saveState, 30000);
-
-            console.log('Progressive Pomodoro v2.0 initialized');
-        }
-
-        // Public API for inline event handlers
-        window.app = { toggleTask, deleteTask, selectTask };
-
-        // Start
-        document.addEventListener('DOMContentLoaded', init);
-    })();
-    </script>
+      </div>
+
+      <!-- ===== HISTORY PAGE ===== -->
+      <div id="history-page" class="page">
+        <div class="history-header">
+          <h2>History</h2>
+          <div class="history-actions">
+            <button class="btn btn-export" id="export-btn">Export CSV</button>
+            <button class="btn btn-danger"  id="clear-history-btn">Clear</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">This Week</div>
+          <div class="weekly-chart" id="weekly-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Sessions</div>
+          <div class="history-list" id="history-list">
+            <div class="history-empty"><div class="empty-icon">📋</div><p>No sessions yet. Start your first pomodoro!</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== STATS PAGE ===== -->
+      <div id="stats-page" class="page">
+        <h2 style="font-size:1.3rem;font-weight:700;margin-bottom:16px;">Statistics</h2>
+        <div class="stats-grid">
+          <div class="stats-card"><div class="s-value" id="total-focus-time" style="color:var(--accent-work);">0h</div><div class="s-label">Total Focus Time</div></div>
+          <div class="stats-card"><div class="s-value" id="total-sessions-stat" style="color:var(--accent-break);">0</div><div class="s-label">Total Sessions</div></div>
+          <div class="stats-card"><div class="s-value" id="avg-duration" style="color:var(--accent-success);">0m</div><div class="s-label">Avg Duration</div></div>
+          <div class="stats-card"><div class="s-value" id="best-streak" style="color:var(--accent-warning);">0</div><div class="s-label">Best Streak</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Focus Distribution</div>
+          <div class="focus-distribution" id="focus-distribution"></div>
+          <div class="focus-legend" id="focus-legend"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Weekly Summary</div>
+          <p id="weekly-summary-text" style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">No sessions this week yet.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">Last 35 Days</div>
+          <div class="heatmap-grid" id="heatmap-grid"></div>
+          <div class="heatmap-legend">
+            <span style="color:var(--text-muted);font-size:0.65rem;">Less</span>
+            <div class="heatmap-legend-cells">
+              <div class="heatmap-cell" style="--intensity:0.1"></div>
+              <div class="heatmap-cell" style="--intensity:0.3"></div>
+              <div class="heatmap-cell" style="--intensity:0.55"></div>
+              <div class="heatmap-cell" style="--intensity:0.75"></div>
+              <div class="heatmap-cell" style="--intensity:1"></div>
+            </div>
+            <span style="color:var(--text-muted);font-size:0.65rem;">More</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Focus by Hour of Day</div>
+          <div class="hourly-chart" id="hourly-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Average Focus by Day of Week</div>
+          <div class="weekly-chart" id="dow-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Rating Trend (14 days)</div>
+          <svg id="rating-trend-svg" width="100%" height="60" viewBox="0 0 300 60" preserveAspectRatio="none" style="overflow:visible;"></svg>
+        </div>
+        <div class="card">
+          <div class="card-title">Session Duration Distribution</div>
+          <div id="duration-dist"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Time by Task</div>
+          <div id="task-history"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Personal Records</div>
+          <div class="records-grid" id="records-grid"><p style="color:var(--text-muted);font-size:0.85rem;">Complete sessions to see records</p></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Achievements</div>
+          <div class="achievements-grid" id="achievements-grid"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Longest Sessions</div>
+          <div id="longest-sessions"><p style="color:var(--text-muted);font-size:0.85rem;">No data yet</p></div>
+        </div>
+        <!-- Focus Zone Detection (#19) -->
+        <div class="card">
+          <div class="card-title">Focus Zone</div>
+          <div id="focus-zone-display"><p style="color:var(--text-muted);font-size:0.85rem;">Not enough data</p></div>
+        </div>
+        <!-- Mood Distribution (#21) -->
+        <div class="card">
+          <div class="card-title">Mood Distribution</div>
+          <div id="mood-distribution"></div>
+        </div>
+        <!-- Complexity vs Focus (#28) -->
+        <div class="card">
+          <div class="card-title">Complexity vs Focus</div>
+          <div id="complexity-focus-chart"></div>
+        </div>
+        <!-- Focus Improvement Suggestions (#30) -->
+        <div class="card">
+          <div class="card-title">Focus Insight</div>
+          <div id="focus-suggestion"><p style="color:var(--text-muted);font-size:0.85rem;">Complete more sessions for insights</p></div>
+        </div>
+        <!-- #47 Week Comparison -->
+        <div class="card">
+          <div class="card-title">This Week vs Last Week</div>
+          <div id="week-comparison"></div>
+        </div>
+        <!-- #51 Data Visualization Themes -->
+        <div class="card">
+          <div class="card-title">Chart Color Scheme</div>
+          <div id="viz-theme-picker" class="viz-theme-picker"></div>
+        </div>
+        <!-- #54 Cumulative Focus Time Graph -->
+        <div class="card">
+          <div class="card-title">Cumulative Focus Time</div>
+          <svg id="cumulative-focus-svg" width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none" style="overflow:visible;"></svg>
+        </div>
+        <!-- #55 Session Gap Analysis -->
+        <div class="card">
+          <div class="card-title">Session Gap Analysis</div>
+          <div id="session-gap-analysis"></div>
+        </div>
+        <!-- #56 Goal vs Actual -->
+        <div class="card">
+          <div class="card-title">Goal vs Actual</div>
+          <div id="goal-vs-actual"></div>
+        </div>
+        <!-- #58 Exportable Reports -->
+        <div class="card">
+          <div class="card-title">Export Report</div>
+          <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">Download a visual summary of your stats as an image.</p>
+          <button class="btn btn-export" id="export-report-btn">Export as Image</button>
+        </div>
+        <!-- #77 Weekly Missions -->
+        <div class="card">
+          <div class="card-title">Weekly Missions</div>
+          <div id="missions-grid" class="missions-grid"></div>
+        </div>
+        <!-- #78 Focus Garden -->
+        <div class="card">
+          <div class="card-title">Focus Garden</div>
+          <div id="focus-garden-grid" class="focus-garden-grid"></div>
+        </div>
+        <!-- #85 Progress Timeline -->
+        <div class="card">
+          <div class="card-title">Progress Timeline</div>
+          <div id="progress-timeline" class="progress-timeline"></div>
+        </div>
+        <!-- #86,92 Sharing -->
+        <div class="card">
+          <div class="card-title">Share</div>
+          <div class="share-buttons-row">
+            <button class="btn btn-export" id="share-daily-btn" aria-label="Share daily summary as PNG">Share Today</button>
+            <button class="btn btn-export" id="share-weekly-btn" aria-label="Share weekly digest as PNG">Share Week</button>
+          </div>
+        </div>
+        <!-- #88 Focus Challenge -->
+        <div class="card">
+          <div class="card-title">Focus Challenge</div>
+          <div class="challenge-link-row">
+            <button class="btn btn-export" id="copy-challenge-btn" aria-label="Copy your focus challenge to clipboard">Copy Challenge</button>
+          </div>
+          <div class="challenge-paste-row" style="margin-top:10px;">
+            <input type="text" id="paste-challenge-input" class="task-input" placeholder="Paste a friend's challenge here…" aria-label="Paste challenge string" style="font-size:0.78rem;">
+            <button class="btn btn-secondary-action" id="compare-challenge-btn" style="margin-top:6px;">Compare</button>
+          </div>
+          <div id="challenge-comparison"></div>
+        </div>
+      </div>
+
+      <!-- ===== TASKS PAGE ===== -->
+      <div id="tasks-page" class="page">
+        <div class="tasks-header">
+          <h2>Task Queue</h2>
+          <span id="task-progress" class="task-progress-text"></span>
+        </div>
+        <div class="card">
+          <div class="add-task-form">
+            <input type="text" id="new-task-input" class="task-input"
+              placeholder="New task name…" maxlength="80" autocomplete="off">
+            <div class="priority-row">
+              <span class="priority-label">Priority:</span>
+              <button class="priority-chip" data-priority="low">Low</button>
+              <button class="priority-chip active" data-priority="medium">Med</button>
+              <button class="priority-chip" data-priority="high">High</button>
+            </div>
+            <!-- Task time estimate (#34) -->
+            <div class="estimate-row">
+              <span class="priority-label">Est. Pomodoros:</span>
+              <input type="number" id="task-estimate-input" class="setting-input" min="0" max="20" value="0" style="width:60px;">
+            </div>
+            <button class="btn btn-primary" id="add-task-btn">Add Task</button>
+            <button class="btn btn-export" id="save-template-btn" style="margin-top:6px;width:100%;">Save as Template</button>
+          </div>
+        </div>
+        <!-- Task templates (#39) -->
+        <div class="card">
+          <div class="card-title">Templates</div>
+          <div id="template-list" class="template-list">
+            <div class="tasks-empty">No templates saved yet.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div class="card-title" style="margin-bottom:0;">Tasks</div>
+            <label style="font-size:0.72rem;color:var(--text-muted);display:flex;align-items:center;gap:6px;cursor:pointer;">
+              Show Archived <input type="checkbox" id="show-archived-toggle">
+            </label>
+          </div>
+          <div id="task-queue-list" class="task-queue-list">
+            <div class="tasks-empty">No tasks yet. Add one above!</div>
+          </div>
+        </div>
+        <!-- Recurring tasks (#33) -->
+        <div class="card">
+          <div class="card-title">Recurring Tasks</div>
+          <div class="add-recurring-form">
+            <input type="text" id="recurring-task-input" class="task-input" placeholder="Recurring task name…" maxlength="80" autocomplete="off">
+            <div class="recurring-days-row" id="recurring-days-row">
+              <label class="day-check"><input type="checkbox" data-day="0"><span>Sun</span></label>
+              <label class="day-check"><input type="checkbox" data-day="1"><span>Mon</span></label>
+              <label class="day-check"><input type="checkbox" data-day="2"><span>Tue</span></label>
+              <label class="day-check"><input type="checkbox" data-day="3"><span>Wed</span></label>
+              <label class="day-check"><input type="checkbox" data-day="4"><span>Thu</span></label>
+              <label class="day-check"><input type="checkbox" data-day="5"><span>Fri</span></label>
+              <label class="day-check"><input type="checkbox" data-day="6"><span>Sat</span></label>
+            </div>
+            <button class="btn btn-export" id="add-recurring-btn">Add Recurring</button>
+          </div>
+          <div id="recurring-task-list" class="recurring-task-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Import Session Data</div>
+          <div class="setting-row">
+            <div><div class="setting-label">Import CSV</div><div class="setting-desc">Merge sessions from exported CSV file</div></div>
+            <label class="btn btn-secondary-action" style="cursor:pointer;">Import<input type="file" accept=".csv" id="import-csv-input" style="display:none"></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== SETTINGS PAGE ===== -->
+      <div id="settings-page" class="page">
+        <div class="settings-section">
+          <h2>Settings</h2>
+          <div class="card">
+            <div class="card-title">Timer</div>
+            <div class="setting-row">
+              <div><div class="setting-label">Initial Work</div><div class="setting-desc">Starting work interval (min)</div></div>
+              <input type="number" id="initial-work" class="setting-input" min="1" max="120" value="5">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Adjustment</div><div class="setting-desc">Time added/removed per rating (min)</div></div>
+              <input type="number" id="interval-adjust" class="setting-input" min="1" max="30" value="2">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Short Break</div><div class="setting-desc">Break between sessions (min)</div></div>
+              <input type="number" id="break-duration" class="setting-input" min="1" max="30" value="5">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Long Break</div><div class="setting-desc">After every 4 sessions (min)</div></div>
+              <input type="number" id="long-break-duration" class="setting-input" min="1" max="60" value="15">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Session Target</div><div class="setting-desc">Daily session goal (0 = off)</div></div>
+              <input type="number" id="session-target" class="setting-input" min="0" max="20" value="0">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Count Up Mode</div><div class="setting-desc">Show elapsed time instead of countdown</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="count-up-toggle"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Warm-up Mode</div><div class="setting-desc">2-min warm-up before real timer starts</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="warmup-toggle"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Overtime Tracking</div><div class="setting-desc">Allow working past timer end</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="overtime-toggle"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Pause Limit</div><div class="setting-desc">Max pauses per session (-1 = unlimited)</div></div>
+              <input type="number" id="pause-limit-input" class="setting-input" min="-1" max="10" value="-1">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Focus Lockout</div><div class="setting-desc">Disable skip/pause for N sessions (0 = off)</div></div>
+              <input type="number" id="lockout-input" class="setting-input" min="0" max="20" value="0">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Min Session</div><div class="setting-desc">Sessions under N min don't count for stats</div></div>
+              <input type="number" id="min-session-input" class="setting-input" min="1" max="30" value="5">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Wind-down Mode</div><div class="setting-desc">Shorten sessions near end-of-day</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="winddown-toggle"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">End-of-Day Time</div><div class="setting-desc">When to start winding down</div></div>
+              <input type="time" id="winddown-time-input" class="setting-input" value="18:00" style="width:100px;">
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Notifications</div>
+            <div class="setting-row">
+              <div><div class="setting-label">Sound Alerts</div><div class="setting-desc">Play sound when timer ends</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="sound-enabled" checked><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Browser Notifications</div><div class="setting-desc">Show desktop notification</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="notif-enabled"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Auto-start Breaks</div><div class="setting-desc">Start break timer automatically</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="auto-break" checked><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Auto-start Work</div><div class="setting-desc">Start work timer after break</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="auto-work"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Micro-break Reminders</div><div class="setting-desc">30s stretch prompt during long sessions</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="micro-break-enabled" checked><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Focus Affirmations</div><div class="setting-desc">Motivational message at session start</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="affirmations-enabled" checked><span class="toggle-track"></span></label>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Appearance</div>
+            <div class="setting-row">
+              <div><div class="setting-label">Theme</div><div class="setting-desc">Light, dark, or system default</div></div>
+              <div class="theme-toggle-group">
+                <button class="theme-opt active" data-theme="dark">Dark</button>
+                <button class="theme-opt" data-theme="light">Light</button>
+                <button class="theme-opt" data-theme="system">Auto</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Accent Color</div><div class="setting-desc">Primary highlight color</div></div>
+              <div class="color-swatches" id="color-swatches">
+                <div class="color-swatch active" data-accent="indigo" style="background:#6366f1" title="Indigo"></div>
+                <div class="color-swatch" data-accent="purple" style="background:#8b5cf6" title="Purple"></div>
+                <div class="color-swatch" data-accent="blue"   style="background:#3b82f6" title="Blue"></div>
+                <div class="color-swatch" data-accent="teal"   style="background:#14b8a6" title="Teal"></div>
+                <div class="color-swatch" data-accent="green"  style="background:#10b981" title="Green"></div>
+                <div class="color-swatch" data-accent="rose"   style="background:#f43f5e" title="Rose"></div>
+                <div class="color-swatch" data-accent="orange" style="background:#f97316" title="Orange"></div>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Font Size</div><div class="setting-desc">Interface text scale</div></div>
+              <div class="font-size-group">
+                <button class="font-opt" data-size="0.9">S</button>
+                <button class="font-opt active" data-size="1">M</button>
+                <button class="font-opt" data-size="1.1">L</button>
+                <button class="font-opt" data-size="1.2">XL</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Background Animations</div><div class="setting-desc">Floating orb effects</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="animations-enabled" checked><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Reduced Motion</div><div class="setting-desc">Minimise all transitions</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="reduced-motion"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Background Style</div><div class="setting-desc">Choose a background look</div></div>
+              <div class="bg-options">
+                <button class="bg-opt active" data-bg="none">None</button>
+                <button class="bg-opt" data-bg="gradient-warm">Warm</button>
+                <button class="bg-opt" data-bg="gradient-cool">Cool</button>
+                <button class="bg-opt" data-bg="gradient-forest">Forest</button>
+                <button class="bg-opt" data-bg="gradient-sunset">Sunset</button>
+                <button class="bg-opt" data-bg="gradient-ocean">Ocean</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Timer Font</div><div class="setting-desc">Font style for timer display</div></div>
+              <div class="timer-font-group">
+                <button class="timer-font-opt active" data-font="mono">Mono</button>
+                <button class="timer-font-opt" data-font="sans">Sans</button>
+                <button class="timer-font-opt" data-font="serif">Serif</button>
+                <button class="timer-font-opt" data-font="display">Display</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Notification Sound</div><div class="setting-desc">Sound effect when timer ends</div></div>
+              <div class="notif-sound-group">
+                <button class="notif-sound-opt active" data-sound="default">Default</button>
+                <button class="notif-sound-opt" data-sound="bell">Bell</button>
+                <button class="notif-sound-opt" data-sound="chime">Chime</button>
+                <button class="notif-sound-opt" data-sound="ding">Ding</button>
+                <button class="notif-sound-opt" data-sound="gong">Gong</button>
+                <button class="notif-sound-opt" data-sound="marimba">Marimba</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">UI Density</div><div class="setting-desc">Spacing between interface elements</div></div>
+              <div class="density-group">
+                <button class="density-opt" data-density="compact">Compact</button>
+                <button class="density-opt active" data-density="comfortable">Normal</button>
+                <button class="density-opt" data-density="spacious">Spacious</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Celebration Style</div><div class="setting-desc">Animation on session completion</div></div>
+              <div class="celebration-group">
+                <button class="celebration-opt active" data-celebration="confetti">Confetti</button>
+                <button class="celebration-opt" data-celebration="fireworks">Fireworks</button>
+                <button class="celebration-opt" data-celebration="sparkles">Sparkles</button>
+                <button class="celebration-opt" data-celebration="none">None</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Timer Size</div><div class="setting-desc">Adjust the timer ring size</div></div>
+              <div class="timer-scale-group">
+                <input type="range" id="timer-scale-slider" class="scale-slider" min="0.6" max="1.4" step="0.1" value="1">
+                <span id="timer-scale-value" class="scale-value">100%</span>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Seasonal Theme</div><div class="setting-desc">Auto-applied colour hints for the current season</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="seasonal-theme-toggle" checked><span class="toggle-track"></span></label>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Focus Rating Labels</div>
+            <div class="setting-row">
+              <div><div class="setting-label">Level 1 Label</div><div class="setting-desc">Rename "Distracted"</div></div>
+              <input type="text" id="focus-label-distracted" class="setting-input" style="width:110px;text-align:left;font-family:inherit;" value="Distracted" maxlength="20">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Level 2 Label</div><div class="setting-desc">Rename "Okay"</div></div>
+              <input type="text" id="focus-label-okay" class="setting-input" style="width:110px;text-align:left;font-family:inherit;" value="Okay" maxlength="20">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Level 3 Label</div><div class="setting-desc">Rename "Focused"</div></div>
+              <input type="text" id="focus-label-focused" class="setting-input" style="width:110px;text-align:left;font-family:inherit;" value="Focused" maxlength="20">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Level 4 Label</div><div class="setting-desc">Rename "Flow State"</div></div>
+              <input type="text" id="focus-label-flow" class="setting-input" style="width:110px;text-align:left;font-family:inherit;" value="Flow State" maxlength="20">
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Ambient Sounds</div>
+            <div class="ambient-options">
+              <button class="ambient-btn active" data-ambient="none">Off</button>
+              <button class="ambient-btn" data-ambient="whitenoise">White Noise</button>
+              <button class="ambient-btn" data-ambient="rain">Rain</button>
+              <button class="ambient-btn" data-ambient="lofi">Lo-fi Pads</button>
+            </div>
+          </div>
+          <!-- #83 Unlockable Themes -->
+          <div class="card">
+            <div class="card-title">Unlockable Themes</div>
+            <div id="unlockable-themes" class="unlockable-themes-grid"></div>
+          </div>
+          <!-- Accessibility Section (#94,95,97,99,100,101,104,105) -->
+          <div class="card">
+            <div class="card-title">Accessibility</div>
+            <div class="setting-row">
+              <div><div class="setting-label">High Contrast</div><div class="setting-desc">WCAG AAA contrast ratios</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="high-contrast-toggle" aria-label="High contrast mode"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Colorblind Mode</div><div class="setting-desc">Color-safe palettes</div></div>
+              <div class="colorblind-options">
+                <button class="cb-opt active" data-cb="none" aria-label="No colorblind palette">Off</button>
+                <button class="cb-opt" data-cb="deuteranopia" aria-label="Deuteranopia palette">Deut.</button>
+                <button class="cb-opt" data-cb="protanopia" aria-label="Protanopia palette">Prot.</button>
+                <button class="cb-opt" data-cb="tritanopia" aria-label="Tritanopia palette">Trit.</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Voice Control</div><div class="setting-desc">Control timer with voice commands</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="voice-control-toggle" aria-label="Voice control"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Haptic Feedback</div><div class="setting-desc">Vibrate on button press and timer end</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="haptic-toggle" aria-label="Haptic feedback"><span class="toggle-track"></span></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Language</div><div class="setting-desc">Interface language</div></div>
+              <select id="language-select" class="setting-input" style="width:90px;" aria-label="Select language">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+              </select>
+            </div>
+          </div>
+          <!-- Data Section (#109,114) -->
+          <div class="card">
+            <div class="card-title">Data</div>
+            <div class="setting-row">
+              <div><div class="setting-label">Export Backup</div><div class="setting-desc">Download all data as JSON</div></div>
+              <button class="btn btn-export" id="backup-btn">Export</button>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Import Backup</div><div class="setting-desc">Restore from JSON backup</div></div>
+              <label class="btn btn-secondary-action" style="cursor:pointer;">Import<input type="file" accept=".json" id="restore-input" style="display:none"></label>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Download iCal</div><div class="setting-desc">Export sessions as .ics calendar file</div></div>
+              <button class="btn btn-export" id="ical-download-btn" aria-label="Download iCal file">iCal</button>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Webhook URL</div><div class="setting-desc">POST session data on completion</div></div>
+              <input type="url" id="webhook-url-input" class="setting-input" style="width:160px;font-size:0.72rem;" placeholder="https://..." aria-label="Webhook URL">
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Webhook Enabled</div><div class="setting-desc">Fire webhook on session end</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="webhook-enabled-toggle" aria-label="Enable webhook"><span class="toggle-track"></span></label>
+            </div>
+          </div>
+          <!-- Technical Section (#121) -->
+          <div class="card">
+            <div class="card-title">Technical</div>
+            <div class="setting-row">
+              <div><div class="setting-label">Performance Mode</div><div class="setting-desc">Disable animations, reduce render frequency</div></div>
+              <label class="toggle-switch"><input type="checkbox" id="performance-mode-toggle" aria-label="Performance mode"><span class="toggle-track"></span></label>
+            </div>
+          </div>
+          <button class="btn btn-save" id="save-settings-btn">Save Settings</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="save-toast" id="save-toast">Settings saved!</div>
+  <div class="celebration" id="celebration"></div>
+  <!-- #94 Screen reader live region -->
+  <div id="aria-live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

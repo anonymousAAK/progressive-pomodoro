@@ -1,0 +1,95 @@
+/* ===== Light mode ===== */
+html.light {
+  --bg-primary:   #f0f0f7;
+  --bg-secondary: #e4e4f0;
+  --bg-card:      rgba(0, 0, 0, 0.04);
+  --bg-card-hover:rgba(0, 0, 0, 0.07);
+  --border:       rgba(0, 0, 0, 0.09);
+  --border-hover: rgba(0, 0, 0, 0.18);
+  --text-primary:   #1a1a2e;
+  --text-secondary: #44446a;
+  --text-muted:     #88889a;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+}
+html.light body { background: var(--bg-primary); }
+html.light .orb  { opacity: 0.06; }
+html.light .nav-btn.active { background: rgba(0,0,0,0.07); }
+
+/* ===== Accent colour overrides ===== */
+html[data-accent="purple"] {
+  --accent-work:      #8b5cf6;
+  --accent-work-glow: rgba(139, 92, 246, 0.3);
+}
+html[data-accent="blue"] {
+  --accent-work:      #3b82f6;
+  --accent-work-glow: rgba(59, 130, 246, 0.3);
+}
+html[data-accent="teal"] {
+  --accent-work:      #14b8a6;
+  --accent-work-glow: rgba(20, 184, 166, 0.3);
+}
+html[data-accent="green"] {
+  --accent-work:      #10b981;
+  --accent-work-glow: rgba(16, 185, 129, 0.3);
+}
+html[data-accent="rose"] {
+  --accent-work:      #f43f5e;
+  --accent-work-glow: rgba(244, 63, 94, 0.3);
+}
+html[data-accent="orange"] {
+  --accent-work:      #f97316;
+  --accent-work-glow: rgba(249, 115, 22, 0.3);
+}
+
+/* ===== Custom background styles (#63) ===== */
+html.bg-style-gradient-warm  .bg-gradient { background: linear-gradient(135deg, #1a0a00 0%, #2d1200 50%, #0a0a0f 100%); }
+html.bg-style-gradient-warm  .orb-1 { background: #f97316 !important; }
+html.bg-style-gradient-warm  .orb-2 { background: #ef4444 !important; }
+
+html.bg-style-gradient-cool  .bg-gradient { background: linear-gradient(135deg, #000a1a 0%, #001233 50%, #0a0a0f 100%); }
+html.bg-style-gradient-cool  .orb-1 { background: #3b82f6 !important; }
+html.bg-style-gradient-cool  .orb-2 { background: #06b6d4 !important; }
+
+html.bg-style-gradient-forest .bg-gradient { background: linear-gradient(135deg, #001a0a 0%, #002d12 50%, #0a0f0a 100%); }
+html.bg-style-gradient-forest .orb-1 { background: #10b981 !important; }
+html.bg-style-gradient-forest .orb-2 { background: #14b8a6 !important; }
+
+html.bg-style-gradient-sunset .bg-gradient { background: linear-gradient(135deg, #1a0a10 0%, #2d0a1a 50%, #0f0a0a 100%); }
+html.bg-style-gradient-sunset .orb-1 { background: #f43f5e !important; }
+html.bg-style-gradient-sunset .orb-2 { background: #f97316 !important; }
+
+html.bg-style-gradient-ocean  .bg-gradient { background: linear-gradient(135deg, #000a14 0%, #001a2d 50%, #0a0a0f 100%); }
+html.bg-style-gradient-ocean  .orb-1 { background: #06b6d4 !important; }
+html.bg-style-gradient-ocean  .orb-2 { background: #8b5cf6 !important; }
+
+/* Light mode background overrides */
+html.light.bg-style-gradient-warm  .bg-gradient { background: linear-gradient(135deg, #fff5eb 0%, #fee2c7 50%, #f0f0f7 100%); }
+html.light.bg-style-gradient-cool  .bg-gradient { background: linear-gradient(135deg, #ebf2ff 0%, #c7d7fe 50%, #f0f0f7 100%); }
+html.light.bg-style-gradient-forest .bg-gradient { background: linear-gradient(135deg, #ebfff5 0%, #c7fed7 50%, #f0f7f0 100%); }
+html.light.bg-style-gradient-sunset .bg-gradient { background: linear-gradient(135deg, #ffebf0 0%, #fec7d7 50%, #f7f0f0 100%); }
+html.light.bg-style-gradient-ocean  .bg-gradient { background: linear-gradient(135deg, #ebf9ff 0%, #c7effe 50%, #f0f0f7 100%); }
+
+/* ===== Seasonal themes (#72) ===== */
+html.season-spring {
+  --accent-break: #10b981;
+}
+html.season-spring .orb-3 { background: #a7f3d0 !important; opacity: 0.08; }
+html.season-spring .ring-bg { stroke: rgba(16, 185, 129, 0.06); }
+
+html.season-summer {
+  --accent-break: #f59e0b;
+}
+html.season-summer .orb-3 { background: #fcd34d !important; opacity: 0.08; }
+html.season-summer .ring-bg { stroke: rgba(245, 158, 11, 0.06); }
+
+html.season-autumn {
+  --accent-break: #f97316;
+}
+html.season-autumn .orb-3 { background: #fb923c !important; opacity: 0.08; }
+html.season-autumn .ring-bg { stroke: rgba(249, 115, 22, 0.06); }
+
+html.season-winter {
+  --accent-break: #6366f1;
+}
+html.season-winter .orb-3 { background: #a5b4fc !important; opacity: 0.08; }
+html.season-winter .ring-bg { stroke: rgba(99, 102, 241, 0.06); }
