@@ -11,14 +11,32 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Core: design tokens, reset, layout shell, navigation, responsive -->
   <link rel="stylesheet" href="css/base.css">
+  <!-- Themes: light mode, accent colors, background gradients, seasonal themes -->
   <link rel="stylesheet" href="css/themes.css">
+  <!-- Components: buttons, toggles, toast, celebration, spinner, keyboard hints -->
   <link rel="stylesheet" href="css/components.css">
+  <!-- Timer: ring, display, controls, session dots, presets, focus rating, mood -->
   <link rel="stylesheet" href="css/timer.css">
+  <!-- History: header, weekly chart, session list -->
   <link rel="stylesheet" href="css/history.css">
+  <!-- Stats: grid, charts, achievements, heatmap, records, leaderboard -->
   <link rel="stylesheet" href="css/stats.css">
+  <!-- Settings: rows, inputs, theme/accent/font/ambient/density options -->
   <link rel="stylesheet" href="css/settings.css">
-  <link rel="stylesheet" href="css/batch5.css">
+  <!-- Accessibility: screen reader, keyboard focus, high contrast, colorblind, RTL -->
+  <link rel="stylesheet" href="css/accessibility.css">
+  <!-- Gamification: weekly missions, focus garden, multiplier, unlockable themes, timeline -->
+  <link rel="stylesheet" href="css/gamification.css">
+  <!-- Overlays: tooltip tour, onboarding, widget mode, affirmation, focus mode -->
+  <link rel="stylesheet" href="css/overlays.css">
+  <!-- Tasks: task items, priority, queue, break activity, session target, energy -->
+  <link rel="stylesheet" href="css/tasks.css">
+  <!-- Sharing: share buttons, challenge comparison, badge share -->
+  <link rel="stylesheet" href="css/sharing.css">
+  <!-- Performance: performance mode, responsive additions -->
+  <link rel="stylesheet" href="css/performance.css">
 </head>
 <body>
 
@@ -443,6 +461,13 @@
           <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">Download a visual summary of your stats as an image.</p>
           <button class="btn btn-export" id="export-report-btn">Export as Image</button>
         </div>
+        <!-- #81 Leaderboard -->
+        <div class="card">
+          <div class="card-title">Leaderboard</div>
+          <div id="leaderboard-grid" class="leaderboard-grid">
+            <p style="color:var(--text-muted);font-size:0.85rem;">Create profiles in Settings to compare.</p>
+          </div>
+        </div>
         <!-- #77 Weekly Missions -->
         <div class="card">
           <div class="card-title">Weekly Missions</div>
@@ -554,6 +579,27 @@
       <div id="settings-page" class="page">
         <div class="settings-section">
           <h2>Settings</h2>
+          <!-- #81 Profiles -->
+          <div class="card">
+            <div class="card-title">Profiles</div>
+            <div class="setting-row">
+              <div><div class="setting-label">Active Profile</div><div class="setting-desc">Switch between user profiles</div></div>
+              <select id="profile-select" class="setting-input" style="width:120px;" aria-label="Select profile">
+                <option value="Default">Default</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">New Profile</div><div class="setting-desc">Create a new profile</div></div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <input type="text" id="new-profile-input" class="setting-input" style="width:100px;text-align:left;" placeholder="Name…" maxlength="20">
+                <button class="btn btn-export" id="create-profile-btn" style="padding:4px 10px;font-size:0.72rem;">Create</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><div class="setting-label">Delete Profile</div><div class="setting-desc">Remove selected profile (not Default)</div></div>
+              <button class="btn btn-danger" id="delete-profile-btn" style="padding:4px 10px;font-size:0.72rem;">Delete</button>
+            </div>
+          </div>
           <div class="card">
             <div class="card-title">Timer</div>
             <div class="setting-row">

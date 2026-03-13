@@ -1,0 +1,134 @@
+/**
+ * Accessibility
+ *
+ * Screen reader utilities, keyboard focus indicators, high contrast mode,
+ * colorblind-safe palettes, colorblind option buttons, and RTL layout support.
+ * Features: #94, #95, #97, #99, #105
+ *
+ * @module css/accessibility.css
+ */
+
+/* ===== #94 Screen Reader Support ===== */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ===== #97 Keyboard Navigation - Visible Focus Indicators ===== */
+*:focus-visible {
+  outline: 3px solid var(--accent-work) !important;
+  outline-offset: 2px !important;
+}
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--accent-work) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 5px var(--accent-work-glow) !important;
+}
+
+/* ===== #95 High Contrast Mode ===== */
+html.high-contrast {
+  --bg-primary:   #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-card:      #111111;
+  --bg-card-hover:#1a1a1a;
+  --border:       #ffffff;
+  --border-hover: #ffffff;
+  --text-primary:   #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-muted:     #c0c0c0;
+}
+html.high-contrast body { background: #000000; }
+html.high-contrast .card {
+  border-width: 2px;
+  border-color: #ffffff;
+}
+html.high-contrast .btn-primary {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: none;
+}
+html.high-contrast .btn-primary:hover {
+  box-shadow: 0 0 0 3px #ffffff;
+}
+html.high-contrast .nav-btn.active {
+  background: #ffffff;
+  color: #000000;
+}
+html.high-contrast .ring-progress {
+  stroke: #ffffff !important;
+  filter: none !important;
+}
+html.high-contrast .ring-bg {
+  stroke: #444444;
+}
+html.high-contrast .stat-chip .stat-value {
+  color: #ffffff !important;
+}
+html.high-contrast .toggle-switch input:checked + .toggle-track {
+  background: #ffffff;
+}
+html.high-contrast .toggle-track::after {
+  background: #ffffff;
+}
+html.high-contrast .toggle-switch input:checked + .toggle-track::after {
+  background: #000000;
+}
+
+/* ===== #99 Colorblind Palettes ===== */
+/* Deuteranopia (red-green) */
+html.cb-deuteranopia {
+  --accent-distracted: #d4a017;
+  --accent-okay:       #1e88e5;
+  --accent-focused:    #004d40;
+  --accent-flow:       #6a1b9a;
+  --accent-success:    #1e88e5;
+  --accent-warning:    #d4a017;
+  --accent-danger:     #d4a017;
+}
+/* Protanopia (red) */
+html.cb-protanopia {
+  --accent-distracted: #c6a700;
+  --accent-okay:       #0277bd;
+  --accent-focused:    #00695c;
+  --accent-flow:       #4a148c;
+  --accent-success:    #0277bd;
+  --accent-warning:    #c6a700;
+  --accent-danger:     #c6a700;
+}
+/* Tritanopia (blue-yellow) */
+html.cb-tritanopia {
+  --accent-distracted: #d32f2f;
+  --accent-okay:       #00897b;
+  --accent-focused:    #1565c0;
+  --accent-flow:       #ad1457;
+  --accent-success:    #00897b;
+  --accent-warning:    #d32f2f;
+  --accent-danger:     #d32f2f;
+}
+
+/* Colorblind option buttons */
+.colorblind-options { display: flex; gap: 4px; }
+.cb-opt {
+  padding: 6px 10px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+  color: var(--text-secondary); font-family: inherit; font-size: 0.68rem; font-weight: 600;
+  border-radius: var(--radius-xs); cursor: pointer; transition: all 0.2s var(--ease-smooth);
+}
+.cb-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); transform: translateY(-1px); }
+.cb-opt.active {
+  background: rgba(99,102,241,0.15); border-color: var(--accent-work); color: var(--accent-work);
+  box-shadow: 0 0 8px rgba(99,102,241,0.1);
+}
+
+/* ===== #105 RTL Support ===== */
+[dir="rtl"] .header-actions { left: 0; right: auto; }
+[dir="rtl"] .history-header { flex-direction: row-reverse; }
+[dir="rtl"] .setting-row { flex-direction: row-reverse; }
+[dir="rtl"] .h-details { text-align: right; }
+[dir="rtl"] .progress-timeline {
+  padding-left: 0; padding-right: 24px;
+  border-left: none; border-right: 2px solid var(--border);
+  margin-left: 0; margin-right: 10px;
+}
+[dir="rtl"] .timeline-dot { left: auto; right: -32px; }
+[dir="rtl"] .timeline-item { padding-left: 0; padding-right: 16px; }

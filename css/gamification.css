@@ -1,0 +1,139 @@
+/**
+ * Gamification
+ *
+ * Weekly missions, focus garden, multiplier badge, unlockable themes
+ * (midnight, neon, gold), progress timeline, and coins stat chip.
+ * Features: #77, #78, #82, #83, #84, #85
+ *
+ * @module css/gamification.css
+ */
+
+/* ===== #77 Weekly Missions ===== */
+.missions-grid { display: flex; flex-direction: column; gap: 10px; }
+.mission-item {
+  padding: 12px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm); transition: all 0.25s var(--ease-smooth);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+.mission-item:hover {
+  border-color: var(--border-hover);
+  transform: translateX(2px);
+  box-shadow: var(--shadow-xs);
+}
+.mission-item.mission-done { border-color: var(--accent-success); background: rgba(16,185,129,0.06); }
+.mission-desc { font-size: 0.82rem; font-weight: 500; margin-bottom: 6px; }
+.mission-done .mission-desc { color: var(--accent-success); }
+.mission-bar-track {
+  height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;
+}
+.mission-bar-fill {
+  height: 100%; background: linear-gradient(90deg, var(--accent-work), var(--accent-flow)); border-radius: 3px;
+  transition: width 0.6s var(--ease-bounce);
+}
+.mission-done .mission-bar-fill { background: var(--accent-success); }
+.mission-progress {
+  font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ===== #78 Focus Garden ===== */
+.focus-garden-grid {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.garden-cell {
+  font-size: 1.4rem; cursor: default;
+  transition: transform 0.25s var(--ease-spring);
+}
+.garden-cell:hover { transform: scale(1.3); filter: drop-shadow(0 0 4px rgba(99,102,241,0.3)); }
+
+/* ===== #82 Multiplier Badge ===== */
+.multiplier-badge {
+  position: fixed; top: 12px; left: 12px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #000; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem; font-weight: 800;
+  padding: 6px 14px; border-radius: 20px;
+  z-index: 50; box-shadow: 0 2px 12px rgba(245,158,11,0.4);
+  animation: badgePulse 2s ease-in-out infinite;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  letter-spacing: -0.02em;
+}
+@keyframes badgePulse {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+/* ===== #83 Unlockable Themes ===== */
+.unlockable-themes-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.theme-unlock-btn {
+  padding: 10px 16px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+  color: var(--text-secondary); font-family: inherit; font-size: 0.78rem; font-weight: 600;
+  border-radius: var(--radius-sm); cursor: pointer; transition: all 0.25s var(--ease-smooth);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.theme-unlock-btn.unlocked { border-color: var(--accent-work); }
+.theme-unlock-btn.unlocked:hover { background: rgba(99,102,241,0.12); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.theme-unlock-btn.locked { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.3); }
+.theme-unlock-btn.active { background: rgba(99,102,241,0.2); border-color: var(--accent-work); color: var(--accent-work); box-shadow: var(--shadow-glow); }
+.lock-icon { font-size: 0.9rem; }
+.theme-unlock-desc { font-size: 0.6rem; font-weight: 400; opacity: 0.7; }
+
+/* Unlockable theme: Midnight */
+html.theme-midnight {
+  --bg-primary: #080818;
+  --bg-secondary: #0c0c22;
+  --accent-work: #4f46e5;
+  --accent-work-glow: rgba(79,70,229,0.4);
+}
+/* Unlockable theme: Neon */
+html.theme-neon {
+  --bg-primary: #0a000a;
+  --bg-secondary: #120012;
+  --accent-work: #e040fb;
+  --accent-work-glow: rgba(224,64,251,0.4);
+  --accent-break: #00e5ff;
+  --accent-break-glow: rgba(0,229,255,0.4);
+}
+html.theme-neon .ring-progress {
+  filter: drop-shadow(0 0 16px var(--accent-work-glow)) !important;
+}
+/* Unlockable theme: Gold */
+html.theme-gold {
+  --bg-primary: #0f0a00;
+  --bg-secondary: #1a1200;
+  --accent-work: #f59e0b;
+  --accent-work-glow: rgba(245,158,11,0.4);
+}
+
+/* ===== #85 Progress Timeline ===== */
+.progress-timeline {
+  position: relative;
+  padding-left: 24px;
+  border-left: 2px solid var(--border);
+  margin-left: 10px;
+}
+.timeline-item {
+  position: relative;
+  padding: 10px 0 10px 16px;
+  margin-bottom: 4px;
+  transition: transform 0.2s var(--ease-smooth);
+}
+.timeline-item:hover { transform: translateX(3px); }
+.timeline-dot {
+  position: absolute;
+  left: -32px; top: 10px;
+  font-size: 1.1rem;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-primary);
+  border-radius: 50%;
+  transition: transform 0.25s var(--ease-spring);
+}
+.timeline-item:hover .timeline-dot { transform: scale(1.15); }
+.timeline-text { font-size: 0.82rem; font-weight: 500; }
+.timeline-date { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ===== #84 Coins stat chip ===== */
+.stat-chip.coins .stat-label { font-size: 0.6rem; }

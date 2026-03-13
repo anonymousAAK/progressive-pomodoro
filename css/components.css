@@ -1,3 +1,13 @@
+/**
+ * Components
+ *
+ * Reusable UI components: buttons (primary, secondary, danger, export, save),
+ * toggle switches, toast notifications, celebration/confetti animation,
+ * loading spinner, and keyboard shortcut hints.
+ *
+ * @module css/components.css
+ */
+
 /* ===== Buttons ===== */
 .btn {
   border: none; font-family: inherit; font-weight: 600; cursor: pointer;
@@ -8,8 +18,14 @@
   padding: 14px 40px; background: var(--accent-work); color: white;
   font-size: 0.95rem; border-radius: 50px; box-shadow: 0 4px 20px var(--accent-work-glow);
 }
-.btn-primary:hover  { transform: translateY(-1px); box-shadow: 0 6px 28px var(--accent-work-glow); }
-.btn-primary:active { transform: translateY(0); }
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 8px 28px var(--accent-work-glow);
+}
+.btn-primary:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow: 0 2px 12px var(--accent-work-glow);
+}
 .btn-primary.break-mode { background: var(--accent-break); box-shadow: 0 4px 20px var(--accent-break-glow); }
 .btn-primary.break-mode:hover { box-shadow: 0 6px 28px var(--accent-break-glow); }
 
@@ -18,7 +34,16 @@
   border: 1px solid var(--border); color: var(--text-secondary);
   font-size: 1.1rem; border-radius: 50%;
 }
-.btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--border-hover); color: var(--text-primary); }
+.btn-secondary:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.btn-secondary:active {
+  transform: scale(0.97);
+}
 
 .btn-secondary-action {
   padding: 6px 14px; background: var(--bg-card); border: 1px solid var(--border);
@@ -30,45 +55,76 @@
   padding: 6px 14px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
   color: var(--accent-danger); font-size: 0.75rem; border-radius: var(--radius-xs);
 }
-.btn-danger:hover { background: rgba(239,68,68,0.2); }
+.btn-danger:hover {
+  background: rgba(239,68,68,0.2);
+  transform: translateY(-1px);
+}
 
 .btn-export {
   padding: 6px 14px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);
   color: var(--accent-work); font-size: 0.75rem; border-radius: var(--radius-xs);
 }
-.btn-export:hover { background: rgba(99,102,241,0.2); }
+.btn-export:hover {
+  background: rgba(99,102,241,0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(99,102,241,0.15);
+}
 
 .btn-save {
   width: 100%; padding: 14px; background: var(--accent-work); color: white;
   font-size: 0.9rem; border-radius: var(--radius-sm); margin-top: 8px;
   box-shadow: 0 4px 20px var(--accent-work-glow);
 }
-.btn-save:hover { transform: translateY(-1px); }
+.btn-save:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px var(--accent-work-glow);
+}
+.btn-save:active {
+  transform: translateY(0);
+}
 
 /* ===== Toggle switch ===== */
 .toggle-switch { position: relative; width: 44px; height: 24px; cursor: pointer; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
 .toggle-track {
-  position: absolute; inset: 0; background: rgba(255,255,255,0.08);
-  border-radius: 12px; transition: var(--transition);
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.08);
+  border-radius: 12px;
+  transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .toggle-track::after {
   content: ''; position: absolute; width: 18px; height: 18px;
   background: var(--text-secondary); border-radius: 50%;
-  top: 3px; left: 3px; transition: var(--transition);
+  top: 3px; left: 3px;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 .toggle-switch input:checked + .toggle-track { background: var(--accent-work); }
-.toggle-switch input:checked + .toggle-track::after { transform: translateX(20px); background: white; }
+.toggle-switch input:checked + .toggle-track::after {
+  transform: translateX(20px);
+  background: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
 
 /* ===== Toast ===== */
 .save-toast {
   position: fixed; bottom: 100px; left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: var(--accent-success); color: white;
-  padding: 10px 24px; border-radius: 50px; font-size: 0.85rem; font-weight: 600;
-  opacity: 0; transition: all 0.3s ease; z-index: 100; pointer-events: none;
+  background: var(--accent-success);
+  color: white;
+  padding: 10px 24px; border-radius: 50px;
+  font-size: 0.85rem; font-weight: 600;
+  opacity: 0;
+  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 100; pointer-events: none;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
-.save-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.save-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 
 /* ===== Celebration ===== */
 .celebration { position: fixed; inset: 0; z-index: 200; display: none; pointer-events: none; }
@@ -94,7 +150,12 @@
 /* ===== Keyboard shortcut hint ===== */
 .shortcuts-hint { text-align: center; font-size: 0.65rem; color: var(--text-muted); margin-top: 20px; }
 .kbd {
-  display: inline-block; padding: 2px 6px; background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border); border-radius: 4px;
-  font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; margin: 0 2px;
+  display: inline-block; padding: 3px 7px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem; margin: 0 3px;
+  color: var(--text-muted);
 }

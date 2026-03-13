@@ -1,10 +1,25 @@
-// Central mutable state — imported and mutated by all other modules
+/**
+ * Application State & Constants
+ *
+ * Central mutable state object shared across all modules. Uses a single
+ * object so ES module live bindings work correctly for property mutations.
+ * Also exports static data (achievements, challenges, presets) and pure
+ * helper functions used by multiple modules.
+ *
+ * @module js/state
+ */
 
+/** @constant {number} SVG ring circumference for the timer progress ring */
 export const RING_CIRCUMFERENCE = 2 * Math.PI * 116; // ~729.12
+
+/** @constant {number} Work sessions before a long break triggers */
 export const POMODOROS_BEFORE_LONG_BREAK = 4;
 
-// All mutable app state lives here so modules can share it without circular deps.
-// ES modules export live bindings for primitives only, so we use a single object.
+/**
+ * Central mutable application state.
+ * All modules import and mutate this single object to avoid circular deps.
+ * @type {Object}
+ */
 export const state = {
   // Timer
   timerInterval: null,
@@ -164,10 +179,21 @@ export const state = {
 
   // Feature: Seasonal themes (#72)
   seasonalThemeEnabled: true,
+
+  // Feature: Local leaderboard / profiles (#81)
+  currentProfile: 'Default',
+  profiles: ['Default'],
 };
 
-// --- Static data ---
+// ---------------------------------------------------------------------------
+// Static Data — achievements, challenges, presets, tips
+// ---------------------------------------------------------------------------
 
+/**
+ * Achievement definitions. Each has an `id`, display info, and a `check`
+ * function that receives (sessionHistory, streakData) and returns boolean.
+ * @type {Array<{id: string, icon: string, name: string, desc: string, check: Function}>}
+ */
 export const ACHIEVEMENTS = [
   {
     id: 'first_session', icon: '🌱', name: 'First Step', desc: 'Complete your first session',
@@ -218,6 +244,10 @@ export const ACHIEVEMENTS = [
   },
 ];
 
+/**
+ * Daily challenge definitions. Each has a `desc` and a `check(history)` function.
+ * @type {Array<{desc: string, check: Function}>}
+ */
 export const DAILY_CHALLENGES = [
   {
     desc: 'Complete 4 sessions today',
@@ -249,13 +279,21 @@ export const DAILY_CHALLENGES = [
   },
 ];
 
+/** @constant {Set<number>} Session counts that trigger milestone celebrations */
 export const MILESTONES = new Set([1, 5, 10, 25, 50, 100, 250, 500]);
 
+/**
+ * Calculate XP earned for a completed session.
+ * @param {number} durationMin - Session duration in minutes
+ * @param {string} rating - Focus rating ('distracted'|'okay'|'focused'|'flow')
+ * @returns {number} XP earned
+ */
 export function calculateXP(durationMin, rating) {
   const ratingBonus = { distracted: 0, okay: 5, focused: 15, flow: 30 }[rating] || 0;
   return 10 + Math.floor(durationMin * 2) + ratingBonus;
 }
 
+/** @constant {string[]} Suggested activities during breaks */
 export const BREAK_ACTIVITIES = [
   'Do 10 shoulder rolls',
   'Drink a glass of water',
@@ -269,6 +307,7 @@ export const BREAK_ACTIVITIES = [
   'Tidy one small area of your desk',
 ];
 
+/** @constant {string[]} Motivational affirmations shown at session start */
 export const AFFIRMATIONS = [
   'Deep work creates deep value.',
   'One focused session at a time.',
@@ -282,6 +321,7 @@ export const AFFIRMATIONS = [
   'Every minute of focus counts.',
 ];
 
+/** @constant {string[]} Post-session reflection prompts (#25) */
 export const REFLECTION_PROMPTS = [
   'What went well during this session?',
   'What distracted you the most?',
@@ -297,6 +337,7 @@ export const REFLECTION_PROMPTS = [
   'Did your environment support your focus?',
 ];
 
+/** @constant {Array<{emoji: string, label: string, value: string}>} Mood tracker options (#21) */
 export const MOOD_OPTIONS = [
   { emoji: '\u{1F60A}', label: 'Happy', value: 'happy' },
   { emoji: '\u{1F610}', label: 'Neutral', value: 'neutral' },
@@ -305,6 +346,7 @@ export const MOOD_OPTIONS = [
   { emoji: '\u{1F634}', label: 'Tired', value: 'tired' },
 ];
 
+/** @constant {Object<string, {label: string, work: number, breakDur: number, adjust: number}>} Timer preset configurations */
 export const TIMER_PRESETS = {
   micro:    { label: 'Micro',     work: 5,  breakDur: 5,  adjust: 2 },
   classic:  { label: 'Classic',   work: 25, breakDur: 5,  adjust: 2 },

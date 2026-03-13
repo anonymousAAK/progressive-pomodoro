@@ -1,6 +1,21 @@
 /**
- * Progressive Pomodoro — main entry point
- * Imports all modules and boots the application.
+ * Application Entry Point
+ *
+ * Boots the Progressive Pomodoro app by orchestrating module initialization
+ * in the correct order:
+ *
+ *   1. Load persisted data (settings, history, streaks, achievements)
+ *   2. Apply visual appearance (theme, accent, fonts, animations)
+ *   3. Sync DOM inputs with loaded state values
+ *   4. Wire timer completion callbacks (avoids circular import)
+ *   5. Register all DOM event listeners
+ *   6. Perform initial render of all UI components
+ *   7. Initialize batch 5 features (accessibility, gamification, etc.)
+ *   8. Resume ambient sound, request notifications, register service worker
+ *
+ * Also sets up BroadcastChannel for multi-tab session sync.
+ *
+ * @module js/main
  */
 
 import { state } from './state.js';
@@ -22,8 +37,8 @@ import {
   renderRecurringTasks,
   renderTaskTemplates,
   spawnRecurringTasks,
-} from './render.js';
-import { registerAllEvents } from './events.js';
+} from './render/index.js';
+import { registerAllEvents } from './events/index.js';
 import { setRatingBC } from './rating.js';
 import {
   initBatch5Features,
@@ -35,7 +50,7 @@ import {
   renderProgressTimeline,
   updateWidget,
   setTimerFunctions,
-} from './features-batch5.js';
+} from './features/index.js';
 import { startTimer, pauseTimer, switchMode } from './timer.js';
 
 // --- BroadcastChannel for multi-tab sync ---

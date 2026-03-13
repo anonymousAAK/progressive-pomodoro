@@ -1,7 +1,27 @@
+/**
+ * Storage & Persistence
+ *
+ * Handles all localStorage read/write operations including settings,
+ * session history, streaks, achievements, task queues, and multi-profile
+ * data isolation. Also provides backup/restore and CSV import/export.
+ *
+ * All keys are prefixed with `pp_`. Profile-namespaced keys use the
+ * format `pp_profile_<name>_<key>` (Default profile uses unprefixed keys
+ * for backward compatibility).
+ *
+ * @module js/storage
+ */
+
 import { state } from './state.js';
 
-// --- Persistence helpers ---
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
 
+/**
+ * Load all user settings from localStorage into the shared state object.
+ * Called once at app startup before any rendering.
+ */
 export function loadSettings() {
   state.workDuration     = parseInt(localStorage.getItem('pp_work')      || '5',  10) * 60;
   state.intervalAdjust   = parseInt(localStorage.getItem('pp_adjust')    || '2',  10) * 60;
@@ -58,8 +78,16 @@ export function loadSettings() {
     const labels = JSON.parse(localStorage.getItem('pp_focusLabels'));
     if (labels) state.focusLabels = { ...state.focusLabels, ...labels };
   } catch {}
+
+  // Profiles (#81)
+  state.profiles = JSON.parse(localStorage.getItem('pp_profiles') || '["Default"]');
+  state.currentProfile = localStorage.getItem('pp_currentProfile') || 'Default';
 }
 
+/**
+ * Persist all current settings from state to localStorage.
+ * Called when the user clicks "Save Settings".
+ */
 export function saveSettings() {
   localStorage.setItem('pp_work',         state.workDuration / 60);
   localStorage.setItem('pp_adjust',       state.intervalAdjust / 60);
@@ -94,46 +122,65 @@ export function saveSettings() {
   localStorage.setItem('pp_focusLabels',       JSON.stringify(state.focusLabels));
 }
 
+/** Persist the session chain (#11) to localStorage. */
 export function saveSessionChain() {
   localStorage.setItem('pp_sessionChain', JSON.stringify(state.sessionChain));
 }
 
+/** Persist recurring tasks (#33) to localStorage. */
 export function saveRecurringTasks() {
   localStorage.setItem('pp_recurringTasks', JSON.stringify(state.recurringTasks));
   localStorage.setItem('pp_nextRecurringId', state.nextRecurringId);
 }
 
+/** Persist task templates (#39) to localStorage. */
 export function saveTaskTemplates() {
   localStorage.setItem('pp_taskTemplates', JSON.stringify(state.taskTemplates));
   localStorage.setItem('pp_nextTemplateId', state.nextTemplateId);
 }
 
+// ---------------------------------------------------------------------------
+// Session history
+// ---------------------------------------------------------------------------
+
+/** Load session history from localStorage into state. */
 export function loadHistory() {
   state.sessionHistory = JSON.parse(localStorage.getItem('pp_history') || '[]');
 }
 
+/** Persist session history to localStorage. */
 export function saveHistory() {
   localStorage.setItem('pp_history', JSON.stringify(state.sessionHistory));
 }
 
+/** Load streak data from localStorage into state. */
 export function loadStreak() {
   state.streakData = JSON.parse(localStorage.getItem('pp_streak') || '{"current":0,"best":0,"lastDate":null}');
 }
 
+/** Persist streak data to localStorage. */
 export function saveStreak() {
   localStorage.setItem('pp_streak', JSON.stringify(state.streakData));
 }
 
+/** Load unlocked achievements from localStorage into state. */
 export function loadAchievements() {
   state.unlockedAchievements = JSON.parse(localStorage.getItem('pp_achievements') || '[]');
 }
 
+/** Persist unlocked achievements to localStorage. */
 export function saveAchievements() {
   localStorage.setItem('pp_achievements', JSON.stringify(state.unlockedAchievements));
 }
 
-// --- Full backup / restore ---
+// ---------------------------------------------------------------------------
+// Backup / Restore
+// ---------------------------------------------------------------------------
 
+/**
+ * Export all app data as a downloadable JSON file.
+ * Includes all profile-namespaced keys for multi-profile support.
+ */
 export function backupData() {
   const keys = [
     'pp_work', 'pp_adjust', 'pp_break', 'pp_longBreak',
@@ -143,7 +190,13 @@ export function backupData() {
     'pp_reducedMotion', 'pp_ambient',
     'pp_background', 'pp_timerFont', 'pp_notifSound', 'pp_density',
     'pp_celebrationStyle', 'pp_timerScale', 'pp_seasonalTheme', 'pp_focusLabels',
+    'pp_profiles', 'pp_currentProfile',
   ];
+  // Include profile-namespaced data
+  state.profiles.forEach(name => {
+    const prefix = profilePrefix(name);
+    if (prefix) PROFILE_KEYS.forEach(k => keys.push(prefix + k));
+  });
   const data = {};
   keys.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = v; });
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -155,6 +208,11 @@ export function backupData() {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Restore app data from a JSON backup file.
+ * @param {File} file - The backup JSON file
+ * @param {Function} showToastFn - Toast notification callback
+ */
 export function restoreData(file, showToastFn) {
   const reader = new FileReader();
   reader.onload = e => {
@@ -170,8 +228,141 @@ export function restoreData(file, showToastFn) {
   reader.readAsText(file);
 }
 
-// --- CSV export ---
+// ---------------------------------------------------------------------------
+// Multi-profile support (#81)
+// ---------------------------------------------------------------------------
 
+/** @constant {string[]} localStorage keys that are namespaced per profile */
+const PROFILE_KEYS = ['pp_history', 'pp_streak', 'pp_achievements', 'pp_xp', 'pp_shields', 'pp_taskQueue', 'pp_nextTaskId', 'pp_sessionChain', 'pp_recurringTasks', 'pp_nextRecurringId', 'pp_taskTemplates', 'pp_nextTemplateId'];
+
+/**
+ * Get the localStorage key prefix for a profile.
+ * Default profile uses no prefix (backward compat).
+ * @param {string} name - Profile name
+ * @returns {string} Key prefix (empty string for Default)
+ */
+function profilePrefix(name) {
+  return name === 'Default' ? '' : `pp_profile_${name}_`;
+}
+
+/** Save current profile's data under its namespaced keys before switching. */
+function saveCurrentProfileData() {
+  const prefix = profilePrefix(state.currentProfile);
+  if (!prefix) return; // Default profile uses unprefixed keys
+  PROFILE_KEYS.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v !== null) localStorage.setItem(prefix + k, v);
+  });
+}
+
+/**
+ * Load a profile's namespaced data into the active (unprefixed) keys.
+ * @param {string} name - Profile name to load
+ */
+function loadProfileData(name) {
+  const prefix = profilePrefix(name);
+  if (prefix) {
+    PROFILE_KEYS.forEach(k => {
+      const v = localStorage.getItem(prefix + k);
+      if (v !== null) localStorage.setItem(k, v);
+      else localStorage.removeItem(k);
+    });
+  }
+  loadHistory();
+  loadStreak();
+  loadAchievements();
+  state.xp = parseInt(localStorage.getItem('pp_xp') || '0', 10);
+  state.level = Math.floor(state.xp / 250) + 1;
+  state.streakShields = parseInt(localStorage.getItem('pp_shields') || '0', 10);
+  state.taskQueue = JSON.parse(localStorage.getItem('pp_taskQueue') || '[]');
+  state.nextTaskId = parseInt(localStorage.getItem('pp_nextTaskId') || '1', 10);
+  state.sessionChain = JSON.parse(localStorage.getItem('pp_sessionChain') || '[]');
+  state.recurringTasks = JSON.parse(localStorage.getItem('pp_recurringTasks') || '[]');
+  state.nextRecurringId = parseInt(localStorage.getItem('pp_nextRecurringId') || '1', 10);
+  state.taskTemplates = JSON.parse(localStorage.getItem('pp_taskTemplates') || '[]');
+  state.nextTemplateId = parseInt(localStorage.getItem('pp_nextTemplateId') || '1', 10);
+}
+
+/** Persist the profile list and current profile name. */
+export function saveProfiles() {
+  localStorage.setItem('pp_profiles', JSON.stringify(state.profiles));
+  localStorage.setItem('pp_currentProfile', state.currentProfile);
+}
+
+/**
+ * Switch to a different user profile.
+ * Saves current profile data, loads target profile, then runs callbacks.
+ * @param {string} name - Target profile name
+ * @param {Function[]} [callbacks] - UI refresh callbacks to run after switch
+ */
+export function switchProfile(name, callbacks) {
+  if (name === state.currentProfile) return;
+  if (!state.profiles.includes(name)) return;
+  saveCurrentProfileData();
+  state.currentProfile = name;
+  localStorage.setItem('pp_currentProfile', name);
+  loadProfileData(name);
+  if (callbacks) callbacks.forEach(fn => fn());
+}
+
+/**
+ * Create a new user profile.
+ * @param {string} name - New profile name (must be unique)
+ * @returns {boolean} True if created, false if name exists or empty
+ */
+export function createProfile(name) {
+  if (!name || state.profiles.includes(name)) return false;
+  state.profiles.push(name);
+  saveProfiles();
+  return true;
+}
+
+/**
+ * Delete a user profile and its namespaced data.
+ * Cannot delete the Default profile. Switches to Default if active.
+ * @param {string} name - Profile name to delete
+ * @param {Function[]} [callbacks] - UI refresh callbacks
+ * @returns {boolean} True if deleted
+ */
+export function deleteProfile(name, callbacks) {
+  if (name === 'Default') return false;
+  const prefix = profilePrefix(name);
+  PROFILE_KEYS.forEach(k => localStorage.removeItem(prefix + k));
+  state.profiles = state.profiles.filter(p => p !== name);
+  saveProfiles();
+  if (name === state.currentProfile) {
+    state.currentProfile = 'Default';
+    localStorage.setItem('pp_currentProfile', 'Default');
+    loadProfileData('Default');
+    if (callbacks) callbacks.forEach(fn => fn());
+  }
+  return true;
+}
+
+/**
+ * Get summary stats for a profile (used by leaderboard).
+ * @param {string} name - Profile name
+ * @returns {{name: string, sessions: number, totalMins: number, xp: number, level: number}}
+ */
+export function getProfileStats(name) {
+  const prefix = profilePrefix(name);
+  const historyKey = prefix ? prefix + 'pp_history' : 'pp_history';
+  const xpKey = prefix ? prefix + 'pp_xp' : 'pp_xp';
+  const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+  const xp = parseInt(localStorage.getItem(xpKey) || '0', 10);
+  const totalMins = history.reduce((sum, s) => sum + (s.duration || 0), 0);
+  const level = Math.floor(xp / 250) + 1;
+  return { name, sessions: history.length, totalMins, xp, level };
+}
+
+// ---------------------------------------------------------------------------
+// CSV Export / Import
+// ---------------------------------------------------------------------------
+
+/**
+ * Export session history as a downloadable CSV file.
+ * Includes task, category, duration, rating, distractions, note, date, and time.
+ */
 export function exportHistoryCSV() {
   if (state.sessionHistory.length === 0) return;
   const csv = 'Task,Category,Duration (min),Rating,Distractions,Note,Date,Time\n' +
@@ -191,8 +382,10 @@ export function exportHistoryCSV() {
   URL.revokeObjectURL(url);
 }
 
-// --- Clear history ---
-
+/**
+ * Clear all session history after user confirmation.
+ * @param {Function[]} callbacks - UI refresh callbacks to run after clearing
+ */
 export function clearHistory(callbacks) {
   if (!confirm('Clear all session history? This cannot be undone.')) return;
   state.sessionHistory = [];
@@ -200,15 +393,19 @@ export function clearHistory(callbacks) {
   callbacks.forEach(fn => fn());
 }
 
-// --- Save task queue ---
-
+/** Persist the task queue and next task ID to localStorage. */
 export function saveTaskQueue() {
   localStorage.setItem('pp_taskQueue', JSON.stringify(state.taskQueue));
   localStorage.setItem('pp_nextTaskId', state.nextTaskId);
 }
 
-// --- Import CSV sessions ---
-
+/**
+ * Import sessions from a CSV file and merge with existing history.
+ * Handles quoted fields and deduplication by timestamp.
+ * @param {File} file - The CSV file to import
+ * @param {Function} showToastFn - Toast notification callback
+ * @param {Function[]} callbacks - UI refresh callbacks
+ */
 export function importSessionsCSV(file, showToastFn, callbacks) {
   const reader = new FileReader();
   reader.onload = e => {

@@ -1,8 +1,22 @@
+/**
+ * Focus Rating Handler
+ *
+ * Processes the user's post-session focus rating. Saves the session entry,
+ * awards XP and coins (with multiplier), updates streaks and achievements,
+ * adjusts the next work duration based on the adaptive algorithm, and
+ * transitions to the appropriate break/work mode.
+ *
+ * Also handles reflection prompts (#25) and multi-tab sync via
+ * BroadcastChannel.
+ *
+ * @module js/rating
+ */
+
 import { state, POMODOROS_BEFORE_LONG_BREAK, MILESTONES, calculateXP, REFLECTION_PROMPTS } from './state.js';
 import { dom } from './dom.js';
 import { playSound } from './audio.js';
 import { saveHistory, saveStreak } from './storage.js';
-import { updateTopStats, renderHistory, renderWeeklyChart, renderStats, renderDailyChallenge, showToast, showMilestoneCelebration, checkFocusTrend } from './render.js';
+import { updateTopStats, renderHistory, renderWeeklyChart, renderStats, renderDailyChallenge, showToast, showMilestoneCelebration, checkFocusTrend } from './render/index.js';
 import { switchMode, startTimer, updateLockoutUI } from './timer.js';
 import { updateStreak, checkAchievements } from './gamification.js';
 import {
@@ -15,13 +29,21 @@ import {
   sendEnhancedNotification,
   hapticFeedback,
   announceToScreenReader,
-} from './features-batch5.js';
+} from './features/index.js';
 
-// BroadcastChannel for multi-tab sync (shared via window)
+/** @type {BroadcastChannel|null} For multi-tab session sync */
 let _bc = null;
+
+/**
+ * Set the BroadcastChannel instance for multi-tab sync.
+ * @param {BroadcastChannel} bc
+ */
 export function setRatingBC(bc) { _bc = bc; }
 
-// Show reflection prompt (#25)
+/**
+ * Show a random reflection prompt (#25).
+ * Avoids repeating the same prompt consecutively.
+ */
 export function showReflectionPrompt() {
   if (!dom.reflectionPrompt || !dom.reflectionQuestion) return;
   let idx = Math.floor(Math.random() * REFLECTION_PROMPTS.length);
@@ -33,6 +55,12 @@ export function showReflectionPrompt() {
   dom.reflectionQuestion.textContent = '💭 ' + REFLECTION_PROMPTS[idx];
 }
 
+/**
+ * Process a focus rating after a work session completes.
+ * Saves session, awards XP/coins, updates streak, adjusts next duration,
+ * and transitions to break or next work session.
+ * @param {'distracted'|'okay'|'focused'|'flow'} rating
+ */
 export function handleRating(rating) {
   state.lastFocusRating = rating;
   const durationMin = parseFloat((state.totalSeconds / 60).toFixed(1));

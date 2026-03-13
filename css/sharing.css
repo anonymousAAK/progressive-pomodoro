@@ -1,0 +1,38 @@
+/**
+ * Sharing
+ *
+ * Social sharing buttons, challenge comparison display,
+ * and badge share buttons for achievements.
+ * Features: #86, #87, #88, #92
+ *
+ * @module css/sharing.css
+ */
+
+/* ===== #86,87,88,92 Sharing ===== */
+.share-buttons-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.challenge-link-row { display: flex; gap: 8px; }
+.challenge-paste-row { display: flex; flex-direction: column; gap: 4px; }
+
+/* Challenge comparison */
+.challenge-compare-header {
+  display: flex; justify-content: space-between;
+  padding: 8px 0; font-size: 0.72rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border); margin-top: 12px;
+}
+.challenge-compare-row {
+  display: flex; justify-content: space-between;
+  padding: 6px 0; font-size: 0.82rem; border-bottom: 1px solid var(--border);
+}
+.challenge-compare-row span { flex: 1; text-align: center; }
+.compare-label { color: var(--text-muted); font-size: 0.72rem; }
+.compare-win { color: var(--accent-success); font-weight: 700; }
+.challenge-compare-date { font-size: 0.68rem; color: var(--text-muted); margin-top: 8px; text-align: center; }
+
+/* ===== #87 Share Achievement Buttons ===== */
+.badge .badge-share-btn {
+  background: none; border: none; font-size: 0.65rem; color: var(--text-muted);
+  cursor: pointer; padding: 2px 6px; border-radius: 4px;
+  transition: var(--transition);
+}
+.badge.unlocked .badge-share-btn:hover { color: var(--accent-work); }

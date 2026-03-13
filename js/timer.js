@@ -1,13 +1,34 @@
+/**
+ * Timer Engine
+ *
+ * Core countdown logic including start, pause, reset, mode switching,
+ * and session chaining. Handles warm-up (#2), overtime (#3), pause
+ * limits (#4), variable break scaling (#8), focus lockout (#9),
+ * micro-breaks (#3), gradual acceleration (#13), smart break
+ * suggestions (#14), and wind-down mode (#15).
+ *
+ * Uses callback injection (setTimerCallbacks) to avoid circular imports
+ * with rating.js.
+ *
+ * @module js/timer
+ */
+
 import { state, POMODOROS_BEFORE_LONG_BREAK, BREAK_ACTIVITIES } from './state.js';
 import { dom } from './dom.js';
 import { playSound, playNotificationSound } from './audio.js';
-import { updateTimerDisplay, updateNextInfo, renderSessionDots, showCelebration, showToast, showAffirmation } from './render.js';
-import { sendEnhancedNotification, hapticFeedback, announceToScreenReader } from './features-batch5.js';
+import { updateTimerDisplay, updateNextInfo, renderSessionDots, showCelebration, showToast, showAffirmation } from './render/index.js';
+import { sendEnhancedNotification, hapticFeedback, announceToScreenReader } from './features/index.js';
 
-// Injected from rating.js to avoid circular deps
+/** @type {Function|null} */
 let _onWorkComplete = null;
+/** @type {Function|null} */
 let _onBreakComplete = null;
 
+/**
+ * Inject callbacks to avoid circular dependency with rating.js.
+ * @param {Function} onWork - Called when work timer completes
+ * @param {Function} onBreak - Called when break timer completes
+ */
 export function setTimerCallbacks(onWork, onBreak) {
   _onWorkComplete  = onWork;
   _onBreakComplete = onBreak;
@@ -69,8 +90,15 @@ function checkSmartBreakSuggestion() {
   }
 }
 
-// --- Controls ---
+// ---------------------------------------------------------------------------
+// Public timer controls
+// ---------------------------------------------------------------------------
 
+/**
+ * Start or resume the countdown timer.
+ * On fresh start: captures task/intention, shows affirmation, applies
+ * warm-up and wind-down modes. On resume: just restarts the interval.
+ */
 export function startTimer() {
   if (state.timerInterval) return;
   state.currentTask = dom.taskInput.value.trim();
@@ -200,6 +228,7 @@ export function startTimer() {
   }, 1000);
 }
 
+/** Stop overtime tracking and trigger timer completion. */
 export function stopOvertime() {
   if (!state.isOvertime) return;
   state.isOvertime = false;
@@ -212,6 +241,10 @@ export function stopOvertime() {
   _onTimerComplete();
 }
 
+/**
+ * Pause the timer. Respects pause limits (#4) and focus lockout (#9).
+ * Increments pause counter and updates UI.
+ */
 export function pauseTimer() {
   // Check pause limit (#4)
   if (state.pauseLimit >= 0 && state.pausesUsed >= state.pauseLimit) {
@@ -265,6 +298,7 @@ function updateLockoutUI() {
 
 export { updateLockoutUI };
 
+/** Reset timer to initial work state, clearing all temporary flags. */
 export function resetTimer() {
   clearInterval(state.timerInterval);
   state.timerInterval = null;
@@ -307,6 +341,11 @@ export function resetTimer() {
   document.title = 'Progressive Pomodoro';
 }
 
+/**
+ * Switch timer mode (work/break/longbreak).
+ * Applies variable break scaling (#8) for break modes.
+ * @param {'work'|'break'|'longbreak'} mode - Target mode
+ */
 export function switchMode(mode) {
   clearInterval(state.timerInterval);
   state.timerInterval = null;
@@ -430,8 +469,11 @@ function _onTimerComplete() {
   }
 }
 
-// --- Session chaining helpers (#11) ---
+// ---------------------------------------------------------------------------
+// Session chaining (#11)
+// ---------------------------------------------------------------------------
 
+/** Start executing the session chain from the first entry. */
 export function startChain() {
   if (state.sessionChain.length === 0) return;
   state.chainIndex = 0;
@@ -460,14 +502,14 @@ function advanceChain() {
   if (state.chainIndex < state.sessionChain.length) {
     // Mark previous as done
     state.sessionChain[state.chainIndex - 1].done = true;
-    import('./render.js').then(m => m.renderSessionChain());
+    import('./render/index.js').then(m => m.renderSessionChain());
     loadChainEntry(state.chainIndex);
     // Auto-start next
     startTimer();
   } else {
     // Chain complete
     state.sessionChain.forEach(e => e.done = true);
-    import('./render.js').then(m => m.renderSessionChain());
+    import('./render/index.js').then(m => m.renderSessionChain());
     showToast('⛓ Session chain complete!');
     switchMode('work');
   }

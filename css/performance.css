@@ -1,0 +1,24 @@
+/**
+ * Performance
+ *
+ * Performance mode that disables animations, transitions, and decorative
+ * elements for low-end devices. Responsive additions for batch5 features.
+ * Feature: #121
+ *
+ * @module css/performance.css
+ */
+
+/* ===== #121 Performance Mode ===== */
+.performance-mode * {
+  animation: none !important;
+  transition: none !important;
+}
+.performance-mode .orb { display: none !important; }
+.performance-mode .bg-gradient { display: none !important; }
+.performance-mode .confetti { display: none !important; }
+
+/* ===== Responsive additions ===== */
+@media (max-width: 380px) {
+  .share-buttons-row { flex-direction: column; }
+  .unlockable-themes-grid { flex-direction: column; }
+}
