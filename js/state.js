@@ -164,6 +164,10 @@ export const state = {
 
   // Feature: Seasonal themes (#72)
   seasonalThemeEnabled: true,
+
+  // Feature: Local leaderboard / profiles (#81)
+  currentProfile: 'Default',
+  profiles: ['Default'],
 };
 
 // --- Static data ---

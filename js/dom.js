@@ -168,4 +168,11 @@ export const dom = {
   recurringTaskInput: $('recurring-task-input'),
   addRecurringBtn:    $('add-recurring-btn'),
   recurringTaskList:  $('recurring-task-list'),
+
+  // Profiles / Leaderboard (#81)
+  profileSelect:      $('profile-select'),
+  newProfileInput:    $('new-profile-input'),
+  createProfileBtn:   $('create-profile-btn'),
+  deleteProfileBtn:   $('delete-profile-btn'),
+  leaderboardGrid:    $('leaderboard-grid'),
 };

@@ -118,3 +118,19 @@
   border-radius: 4px; cursor: pointer; transition: opacity 0.2s;
 }
 .badge-share-btn:hover { opacity: 0.85; }
+
+/* #81 Leaderboard */
+.leaderboard-grid { display: flex; flex-direction: column; gap: 6px; }
+.leaderboard-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  background: var(--bg-elevated, rgba(255,255,255,0.04));
+  font-size: 0.82rem;
+}
+.leaderboard-row.current {
+  border: 1px solid var(--accent-work);
+  background: rgba(99, 102, 241, 0.08);
+}
+.lb-rank { font-size: 1.1rem; min-width: 28px; text-align: center; }
+.lb-name { font-weight: 600; flex: 1; color: var(--text-primary); }
+.lb-stat { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-muted); }

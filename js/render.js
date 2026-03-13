@@ -1,5 +1,5 @@
 import { state, ACHIEVEMENTS, DAILY_CHALLENGES, RING_CIRCUMFERENCE, POMODOROS_BEFORE_LONG_BREAK, AFFIRMATIONS, MOOD_OPTIONS } from './state.js';
-import { saveTaskQueue, saveSessionChain, saveRecurringTasks, saveTaskTemplates } from './storage.js';
+import { saveTaskQueue, saveSessionChain, saveRecurringTasks, saveTaskTemplates, getProfileStats } from './storage.js';
 import { dom } from './dom.js';
 
 // --- Utilities ---
@@ -191,6 +191,7 @@ export function renderStats() {
   renderSessionGapAnalysis();
   renderGoalVsActual();
   setupExportReport();
+  renderLeaderboard();
 }
 
 // --- Calendar heatmap (last 35 days) ---
@@ -1383,4 +1384,37 @@ export function spawnRecurringTasks() {
     state.taskQueue.push(task);
   });
   saveTaskQueue();
+}
+
+// --- #81 Leaderboard ---
+
+export function renderLeaderboard() {
+  const el = dom.leaderboardGrid;
+  if (!el) return;
+  if (state.profiles.length <= 1) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Create more profiles in Settings to see the leaderboard.</p>';
+    return;
+  }
+  const stats = state.profiles.map(name => getProfileStats(name));
+  stats.sort((a, b) => b.totalMins - a.totalMins);
+  const medals = ['🥇', '🥈', '🥉'];
+  el.innerHTML = stats.map((p, i) => {
+    const hrs = (p.totalMins / 60).toFixed(1);
+    const isCurrent = p.name === state.currentProfile;
+    return `<div class="leaderboard-row${isCurrent ? ' current' : ''}">
+      <span class="lb-rank">${medals[i] || `#${i + 1}`}</span>
+      <span class="lb-name">${escapeHtml(p.name)}</span>
+      <span class="lb-stat">${hrs}h · Lv.${p.level} · ${p.sessions} sessions</span>
+    </div>`;
+  }).join('');
+}
+
+// --- Profile select population ---
+
+export function populateProfileSelect() {
+  const sel = dom.profileSelect;
+  if (!sel) return;
+  sel.innerHTML = state.profiles.map(p =>
+    `<option value="${escapeHtml(p)}"${p === state.currentProfile ? ' selected' : ''}>${escapeHtml(p)}</option>`
+  ).join('');
 }

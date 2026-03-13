@@ -58,6 +58,10 @@ export function loadSettings() {
     const labels = JSON.parse(localStorage.getItem('pp_focusLabels'));
     if (labels) state.focusLabels = { ...state.focusLabels, ...labels };
   } catch {}
+
+  // Profiles (#81)
+  state.profiles = JSON.parse(localStorage.getItem('pp_profiles') || '["Default"]');
+  state.currentProfile = localStorage.getItem('pp_currentProfile') || 'Default';
 }
 
 export function saveSettings() {
@@ -143,7 +147,13 @@ export function backupData() {
     'pp_reducedMotion', 'pp_ambient',
     'pp_background', 'pp_timerFont', 'pp_notifSound', 'pp_density',
     'pp_celebrationStyle', 'pp_timerScale', 'pp_seasonalTheme', 'pp_focusLabels',
+    'pp_profiles', 'pp_currentProfile',
   ];
+  // Include profile-namespaced data
+  state.profiles.forEach(name => {
+    const prefix = profilePrefix(name);
+    if (prefix) PROFILE_KEYS.forEach(k => keys.push(prefix + k));
+  });
   const data = {};
   keys.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = v; });
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -168,6 +178,95 @@ export function restoreData(file, showToastFn) {
     }
   };
   reader.readAsText(file);
+}
+
+// --- Profiles (#81) ---
+
+const PROFILE_KEYS = ['pp_history', 'pp_streak', 'pp_achievements', 'pp_xp', 'pp_shields', 'pp_taskQueue', 'pp_nextTaskId', 'pp_sessionChain', 'pp_recurringTasks', 'pp_nextRecurringId', 'pp_taskTemplates', 'pp_nextTemplateId'];
+
+function profilePrefix(name) {
+  return name === 'Default' ? '' : `pp_profile_${name}_`;
+}
+
+function saveCurrentProfileData() {
+  const prefix = profilePrefix(state.currentProfile);
+  if (!prefix) return; // Default profile uses unprefixed keys
+  PROFILE_KEYS.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v !== null) localStorage.setItem(prefix + k, v);
+  });
+}
+
+function loadProfileData(name) {
+  const prefix = profilePrefix(name);
+  if (prefix) {
+    PROFILE_KEYS.forEach(k => {
+      const v = localStorage.getItem(prefix + k);
+      if (v !== null) localStorage.setItem(k, v);
+      else localStorage.removeItem(k);
+    });
+  }
+  loadHistory();
+  loadStreak();
+  loadAchievements();
+  state.xp = parseInt(localStorage.getItem('pp_xp') || '0', 10);
+  state.level = Math.floor(state.xp / 250) + 1;
+  state.streakShields = parseInt(localStorage.getItem('pp_shields') || '0', 10);
+  state.taskQueue = JSON.parse(localStorage.getItem('pp_taskQueue') || '[]');
+  state.nextTaskId = parseInt(localStorage.getItem('pp_nextTaskId') || '1', 10);
+  state.sessionChain = JSON.parse(localStorage.getItem('pp_sessionChain') || '[]');
+  state.recurringTasks = JSON.parse(localStorage.getItem('pp_recurringTasks') || '[]');
+  state.nextRecurringId = parseInt(localStorage.getItem('pp_nextRecurringId') || '1', 10);
+  state.taskTemplates = JSON.parse(localStorage.getItem('pp_taskTemplates') || '[]');
+  state.nextTemplateId = parseInt(localStorage.getItem('pp_nextTemplateId') || '1', 10);
+}
+
+export function saveProfiles() {
+  localStorage.setItem('pp_profiles', JSON.stringify(state.profiles));
+  localStorage.setItem('pp_currentProfile', state.currentProfile);
+}
+
+export function switchProfile(name, callbacks) {
+  if (name === state.currentProfile) return;
+  if (!state.profiles.includes(name)) return;
+  saveCurrentProfileData();
+  state.currentProfile = name;
+  localStorage.setItem('pp_currentProfile', name);
+  loadProfileData(name);
+  if (callbacks) callbacks.forEach(fn => fn());
+}
+
+export function createProfile(name) {
+  if (!name || state.profiles.includes(name)) return false;
+  state.profiles.push(name);
+  saveProfiles();
+  return true;
+}
+
+export function deleteProfile(name, callbacks) {
+  if (name === 'Default') return false;
+  const prefix = profilePrefix(name);
+  PROFILE_KEYS.forEach(k => localStorage.removeItem(prefix + k));
+  state.profiles = state.profiles.filter(p => p !== name);
+  saveProfiles();
+  if (name === state.currentProfile) {
+    state.currentProfile = 'Default';
+    localStorage.setItem('pp_currentProfile', 'Default');
+    loadProfileData('Default');
+    if (callbacks) callbacks.forEach(fn => fn());
+  }
+  return true;
+}
+
+export function getProfileStats(name) {
+  const prefix = profilePrefix(name);
+  const historyKey = prefix ? prefix + 'pp_history' : 'pp_history';
+  const xpKey = prefix ? prefix + 'pp_xp' : 'pp_xp';
+  const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+  const xp = parseInt(localStorage.getItem(xpKey) || '0', 10);
+  const totalMins = history.reduce((sum, s) => sum + (s.duration || 0), 0);
+  const level = Math.floor(xp / 250) + 1;
+  return { name, sessions: history.length, totalMins, xp, level };
 }
 
 // --- CSV export ---

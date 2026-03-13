@@ -3,11 +3,11 @@ import { dom } from './dom.js';
 import { playSound, startAmbient, stopAmbient } from './audio.js';
 import { applyTheme, applyAccent, applyFontSize, applyAnimations, applyReducedMotion, applyBackground, applyTimerFont, applyNotificationSound, applyDensity, applyFocusLabels, applyCelebrationStyle, applyTimerScale, applySeasonalTheme } from './theme.js';
 import { previewNotificationSound } from './audio.js';
-import { loadSettings, saveSettings, backupData, restoreData, exportHistoryCSV, clearHistory, saveTaskQueue, importSessionsCSV, saveSessionChain, saveRecurringTasks, saveTaskTemplates } from './storage.js';
+import { loadSettings, saveSettings, backupData, restoreData, exportHistoryCSV, clearHistory, saveTaskQueue, importSessionsCSV, saveSessionChain, saveRecurringTasks, saveTaskTemplates, switchProfile, createProfile, deleteProfile, saveProfiles } from './storage.js';
 import { startTimer, pauseTimer, resetTimer, switchMode, stopOvertime, startChain } from './timer.js';
 import { handleRating, showReflectionPrompt } from './rating.js';
 import { getFocusTip } from './tips.js';
-import { renderHistory, renderWeeklyChart, renderStats, updateTopStats, showToast, renderTaskQueue, renderSessionChain, renderRecurringTasks, renderTaskTemplates } from './render.js';
+import { renderHistory, renderWeeklyChart, renderStats, updateTopStats, showToast, renderTaskQueue, renderSessionChain, renderRecurringTasks, renderTaskTemplates, renderLeaderboard, populateProfileSelect } from './render.js';
 import {
   applyHighContrast,
   applyColorblindPalette,
@@ -803,6 +803,45 @@ export function registerAllEvents() {
   if (perfToggle) {
     perfToggle.addEventListener('change', e => {
       applyPerformanceMode(e.target.checked);
+    });
+  }
+
+  // --- #81 Profiles & Leaderboard ---
+  populateProfileSelect();
+
+  if (dom.profileSelect) {
+    dom.profileSelect.addEventListener('change', e => {
+      const refreshAll = [renderHistory, renderWeeklyChart, renderStats, updateTopStats, renderTaskQueue, renderRecurringTasks, renderTaskTemplates];
+      switchProfile(e.target.value, refreshAll);
+      showToast(`Switched to ${e.target.value}`);
+    });
+  }
+
+  if (dom.createProfileBtn) {
+    dom.createProfileBtn.addEventListener('click', () => {
+      const name = dom.newProfileInput ? dom.newProfileInput.value.trim() : '';
+      if (!name) { showToast('Enter a profile name'); return; }
+      if (createProfile(name)) {
+        populateProfileSelect();
+        renderLeaderboard();
+        if (dom.newProfileInput) dom.newProfileInput.value = '';
+        showToast(`Profile "${name}" created`);
+      } else {
+        showToast('Profile already exists');
+      }
+    });
+  }
+
+  if (dom.deleteProfileBtn) {
+    dom.deleteProfileBtn.addEventListener('click', () => {
+      const name = state.currentProfile;
+      if (name === 'Default') { showToast('Cannot delete Default profile'); return; }
+      if (!confirm(`Delete profile "${name}"? All its data will be lost.`)) return;
+      const refreshAll = [renderHistory, renderWeeklyChart, renderStats, updateTopStats, renderTaskQueue, renderRecurringTasks, renderTaskTemplates];
+      deleteProfile(name, refreshAll);
+      populateProfileSelect();
+      renderLeaderboard();
+      showToast(`Profile "${name}" deleted`);
     });
   }
 
