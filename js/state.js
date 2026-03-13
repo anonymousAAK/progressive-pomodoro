@@ -80,6 +80,90 @@ export const state = {
   // Task queue (#19)
   taskQueue: [],
   nextTaskId: 1,
+
+  // Feature: Warm-up mode (#2)
+  warmUpEnabled: false,
+  isWarmUp: false,
+
+  // Feature: Overtime tracking (#3)
+  overtimeEnabled: false,
+  isOvertime: false,
+  overtimeSeconds: 0,
+
+  // Feature: Pause limit (#4)
+  pauseLimit: -1, // -1 = unlimited
+  pausesUsed: 0,
+
+  // Feature: Variable break scaling (#8)
+  actualWorkSeconds: 0, // track actual work time for break scaling
+
+  // Feature: Focus lockout mode (#9)
+  lockoutSessions: 0, // N consecutive sessions to lock
+  lockoutRemaining: 0, // remaining sessions in lockout
+
+  // Feature: Session chaining (#11)
+  sessionChain: [], // [{duration, task, done}]
+  chainIndex: -1,
+
+  // Feature: Minimum session threshold (#12)
+  minSessionMinutes: 5,
+
+  // Feature: End-of-day wind-down (#15)
+  windDownEnabled: false,
+  windDownTime: '18:00',
+  windDownSessionsInWindow: 0,
+
+  // Feature: Mood tracker (#21)
+  currentMood: '',
+
+  // Feature: Task complexity (#28)
+  currentComplexity: 0,
+
+  // Feature: Cognitive load (#29) - computed from today's sessions
+
+  // Feature: Recurring tasks (#33)
+  recurringTasks: [],
+  nextRecurringId: 1,
+
+  // Feature: Task templates (#39)
+  taskTemplates: [],
+  nextTemplateId: 1,
+
+  // Feature: Task archiving (#40)
+  showArchived: false,
+
+  // Feature: Reflection prompts (#25)
+  lastReflectionIndex: -1,
+
+  // Feature: Daily suggestion shown (#30)
+  lastSuggestionDate: '',
+
+  // Feature: Visualization theme (#51)
+  vizTheme: 'default',
+
+  // Feature: Custom background images (#63)
+  backgroundStyle: 'none', // 'none' | 'gradient-warm' | 'gradient-cool' | 'gradient-forest' | 'gradient-sunset' | 'gradient-ocean' | 'solid-dark' | 'solid-light'
+
+  // Feature: Timer font selection (#64)
+  timerFont: 'mono', // 'mono' | 'sans' | 'serif' | 'display'
+
+  // Feature: Custom notification sounds (#66)
+  notificationSound: 'default', // 'default' | 'bell' | 'chime' | 'ding' | 'gong' | 'marimba'
+
+  // Feature: UI density options (#68)
+  uiDensity: 'comfortable', // 'compact' | 'comfortable' | 'spacious'
+
+  // Feature: Custom focus rating labels (#69)
+  focusLabels: { distracted: 'Distracted', okay: 'Okay', focused: 'Focused', flow: 'Flow State' },
+
+  // Feature: Celebration animation options (#70)
+  celebrationStyle: 'confetti', // 'confetti' | 'fireworks' | 'sparkles' | 'none'
+
+  // Feature: Timer size adjustment (#71)
+  timerScale: 1.0, // 0.6 to 1.4
+
+  // Feature: Seasonal themes (#72)
+  seasonalThemeEnabled: true,
 };
 
 // --- Static data ---
@@ -196,6 +280,29 @@ export const AFFIRMATIONS = [
   'This session matters.',
   'Quiet the noise. Find the flow.',
   'Every minute of focus counts.',
+];
+
+export const REFLECTION_PROMPTS = [
+  'What went well during this session?',
+  'What distracted you the most?',
+  'How could you improve your next session?',
+  'Did you accomplish what you set out to do?',
+  'What was your biggest win this session?',
+  'Were there any unexpected challenges?',
+  'How does your energy feel right now?',
+  'What would you do differently next time?',
+  'Did you maintain your focus throughout?',
+  'What are you most proud of from this session?',
+  'Was your task well-defined before starting?',
+  'Did your environment support your focus?',
+];
+
+export const MOOD_OPTIONS = [
+  { emoji: '\u{1F60A}', label: 'Happy', value: 'happy' },
+  { emoji: '\u{1F610}', label: 'Neutral', value: 'neutral' },
+  { emoji: '\u{1F614}', label: 'Sad', value: 'sad' },
+  { emoji: '\u{1F624}', label: 'Frustrated', value: 'frustrated' },
+  { emoji: '\u{1F634}', label: 'Tired', value: 'tired' },
 ];
 
 export const TIMER_PRESETS = {

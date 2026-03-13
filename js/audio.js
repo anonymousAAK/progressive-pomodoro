@@ -65,6 +65,94 @@ export function playSound(type) {
   }
 }
 
+// --- Notification sound preview (#66) ---
+
+export function previewNotificationSound(type) {
+  ensureAudioCtx();
+  const now = audioCtx.currentTime;
+
+  switch (type) {
+    case 'bell': {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      g.gain.setValueAtTime(0.3, now);
+      g.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.8);
+      break;
+    }
+    case 'chime': {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const t = now + i * 0.15;
+        g.gain.setValueAtTime(0.2, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + 0.4);
+      });
+      break;
+    }
+    case 'ding': {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+      g.gain.setValueAtTime(0.25, now);
+      g.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 0.4);
+      break;
+    }
+    case 'gong': {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(130.81, now);
+      g.gain.setValueAtTime(0.35, now);
+      g.gain.exponentialRampToValueAtTime(0.01, now + 2);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(now); osc.stop(now + 2);
+      break;
+    }
+    case 'marimba': {
+      [392, 523.25, 659.25].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        const t = now + i * 0.12;
+        g.gain.setValueAtTime(0.25, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + 0.25);
+      });
+      break;
+    }
+    default:
+      // 'default' - play the standard work-end sound
+      playSound('work-end');
+      break;
+  }
+}
+
+// --- Play custom notification sound (used by timer completion) ---
+
+export function playNotificationSound() {
+  if (!state.soundEnabled) return;
+  const type = state.notificationSound || 'default';
+  if (type === 'default') {
+    playSound('work-end');
+  } else {
+    previewNotificationSound(type);
+  }
+}
+
 // --- Ambient sound engine ---
 
 export function startAmbient(type) {
