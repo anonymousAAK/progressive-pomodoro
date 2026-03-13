@@ -1,7 +1,8 @@
 import { state, TIMER_PRESETS, BREAK_ACTIVITIES } from './state.js';
 import { dom } from './dom.js';
 import { playSound, startAmbient, stopAmbient } from './audio.js';
-import { applyTheme, applyAccent, applyFontSize, applyAnimations, applyReducedMotion } from './theme.js';
+import { applyTheme, applyAccent, applyFontSize, applyAnimations, applyReducedMotion, applyBackground, applyTimerFont, applyNotificationSound, applyDensity, applyFocusLabels, applyCelebrationStyle, applyTimerScale, applySeasonalTheme } from './theme.js';
+import { previewNotificationSound } from './audio.js';
 import { loadSettings, saveSettings, backupData, restoreData, exportHistoryCSV, clearHistory, saveTaskQueue, importSessionsCSV, saveSessionChain, saveRecurringTasks, saveTaskTemplates } from './storage.js';
 import { startTimer, pauseTimer, resetTimer, switchMode, stopOvertime, startChain } from './timer.js';
 import { handleRating, showReflectionPrompt } from './rating.js';
@@ -661,6 +662,68 @@ export function registerAllEvents() {
       announceToScreenReader('Skipped to work');
     }
   });
+
+  // ====================================================================
+  // Batch 4 Event Listeners — Customization/Themes
+  // ====================================================================
+
+  // --- #63 Custom background ---
+  dom.backgroundOpts.forEach(btn => {
+    btn.addEventListener('click', () => applyBackground(btn.dataset.bg));
+  });
+
+  // --- #64 Timer font selection ---
+  dom.timerFontOpts.forEach(btn => {
+    btn.addEventListener('click', () => applyTimerFont(btn.dataset.font));
+  });
+
+  // --- #66 Custom notification sounds ---
+  dom.notifSoundOpts.forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyNotificationSound(btn.dataset.sound);
+      previewNotificationSound(btn.dataset.sound);
+    });
+  });
+
+  // --- #68 UI density options ---
+  dom.densityOpts.forEach(btn => {
+    btn.addEventListener('click', () => applyDensity(btn.dataset.density));
+  });
+
+  // --- #69 Custom focus rating labels ---
+  const focusLabelInputs = [
+    { el: dom.focusLabelDistracted, key: 'distracted' },
+    { el: dom.focusLabelOkay,       key: 'okay' },
+    { el: dom.focusLabelFocused,    key: 'focused' },
+    { el: dom.focusLabelFlow,       key: 'flow' },
+  ];
+  focusLabelInputs.forEach(({ el, key }) => {
+    if (el) {
+      el.addEventListener('change', () => {
+        const val = el.value.trim();
+        if (val) applyFocusLabels({ [key]: val });
+      });
+    }
+  });
+
+  // --- #70 Celebration animation style ---
+  dom.celebrationOpts.forEach(btn => {
+    btn.addEventListener('click', () => applyCelebrationStyle(btn.dataset.celebration));
+  });
+
+  // --- #71 Timer size adjustment ---
+  if (dom.timerScaleSlider) {
+    dom.timerScaleSlider.addEventListener('input', e => {
+      applyTimerScale(parseFloat(e.target.value));
+    });
+  }
+
+  // --- #72 Seasonal theme toggle ---
+  if (dom.seasonalToggle) {
+    dom.seasonalToggle.addEventListener('change', e => {
+      applySeasonalTheme(e.target.checked);
+    });
+  }
 
   // ====================================================================
   // Batch 5 Event Listeners

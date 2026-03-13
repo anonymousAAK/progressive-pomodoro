@@ -145,6 +145,21 @@ export const dom = {
   moodBtns:           $$('.mood-btn'),
   complexityStars:    $$('.complexity-star'),
 
+  // Batch 4 customization
+  backgroundOpts:     $$('.bg-opt'),
+  timerFontOpts:      $$('.timer-font-opt'),
+  notifSoundOpts:     $$('.notif-sound-opt'),
+  densityOpts:        $$('.density-opt'),
+  celebrationOpts:    $$('.celebration-opt'),
+  timerScaleSlider:   $('timer-scale-slider'),
+  timerScaleValue:    $('timer-scale-value'),
+  seasonalToggle:     $('seasonal-theme-toggle'),
+  focusLabelDistracted: $('focus-label-distracted'),
+  focusLabelOkay:     $('focus-label-okay'),
+  focusLabelFocused:  $('focus-label-focused'),
+  focusLabelFlow:     $('focus-label-flow'),
+  timerRingWrapper:   document.querySelector('.timer-ring-wrapper'),
+
   // Tasks page
   taskEstimateInput:  $('task-estimate-input'),
   saveTemplateBtn:    $('save-template-btn'),

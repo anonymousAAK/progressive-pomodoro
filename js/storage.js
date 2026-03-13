@@ -44,6 +44,20 @@ export function loadSettings() {
   state.taskTemplates      = JSON.parse(localStorage.getItem('pp_taskTemplates') || '[]');
   state.nextTemplateId     = parseInt(localStorage.getItem('pp_nextTemplateId') || '1', 10);
   state.lastSuggestionDate = localStorage.getItem('pp_lastSuggestionDate') || '';
+  state.vizTheme           = localStorage.getItem('pp_vizTheme') || 'default';
+
+  // Batch 4 customization settings
+  state.backgroundStyle     = localStorage.getItem('pp_background') || 'none';
+  state.timerFont           = localStorage.getItem('pp_timerFont') || 'mono';
+  state.notificationSound   = localStorage.getItem('pp_notifSound') || 'default';
+  state.uiDensity           = localStorage.getItem('pp_density') || 'comfortable';
+  state.celebrationStyle    = localStorage.getItem('pp_celebrationStyle') || 'confetti';
+  state.timerScale          = parseFloat(localStorage.getItem('pp_timerScale') || '1');
+  state.seasonalThemeEnabled= localStorage.getItem('pp_seasonalTheme') !== 'false';
+  try {
+    const labels = JSON.parse(localStorage.getItem('pp_focusLabels'));
+    if (labels) state.focusLabels = { ...state.focusLabels, ...labels };
+  } catch {}
 }
 
 export function saveSettings() {
@@ -69,6 +83,15 @@ export function saveSettings() {
   localStorage.setItem('pp_minSession',   state.minSessionMinutes);
   localStorage.setItem('pp_windDown',     state.windDownEnabled);
   localStorage.setItem('pp_windDownTime', state.windDownTime);
+  // Batch 4
+  localStorage.setItem('pp_background',       state.backgroundStyle);
+  localStorage.setItem('pp_timerFont',         state.timerFont);
+  localStorage.setItem('pp_notifSound',        state.notificationSound);
+  localStorage.setItem('pp_density',           state.uiDensity);
+  localStorage.setItem('pp_celebrationStyle',  state.celebrationStyle);
+  localStorage.setItem('pp_timerScale',        state.timerScale);
+  localStorage.setItem('pp_seasonalTheme',     state.seasonalThemeEnabled);
+  localStorage.setItem('pp_focusLabels',       JSON.stringify(state.focusLabels));
 }
 
 export function saveSessionChain() {
@@ -118,6 +141,8 @@ export function backupData() {
     'pp_history', 'pp_streak', 'pp_achievements',
     'pp_theme', 'pp_accent', 'pp_fontSize', 'pp_animations',
     'pp_reducedMotion', 'pp_ambient',
+    'pp_background', 'pp_timerFont', 'pp_notifSound', 'pp_density',
+    'pp_celebrationStyle', 'pp_timerScale', 'pp_seasonalTheme', 'pp_focusLabels',
   ];
   const data = {};
   keys.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = v; });

@@ -137,6 +137,33 @@ export const state = {
 
   // Feature: Daily suggestion shown (#30)
   lastSuggestionDate: '',
+
+  // Feature: Visualization theme (#51)
+  vizTheme: 'default',
+
+  // Feature: Custom background images (#63)
+  backgroundStyle: 'none', // 'none' | 'gradient-warm' | 'gradient-cool' | 'gradient-forest' | 'gradient-sunset' | 'gradient-ocean' | 'solid-dark' | 'solid-light'
+
+  // Feature: Timer font selection (#64)
+  timerFont: 'mono', // 'mono' | 'sans' | 'serif' | 'display'
+
+  // Feature: Custom notification sounds (#66)
+  notificationSound: 'default', // 'default' | 'bell' | 'chime' | 'ding' | 'gong' | 'marimba'
+
+  // Feature: UI density options (#68)
+  uiDensity: 'comfortable', // 'compact' | 'comfortable' | 'spacious'
+
+  // Feature: Custom focus rating labels (#69)
+  focusLabels: { distracted: 'Distracted', okay: 'Okay', focused: 'Focused', flow: 'Flow State' },
+
+  // Feature: Celebration animation options (#70)
+  celebrationStyle: 'confetti', // 'confetti' | 'fireworks' | 'sparkles' | 'none'
+
+  // Feature: Timer size adjustment (#71)
+  timerScale: 1.0, // 0.6 to 1.4
+
+  // Feature: Seasonal themes (#72)
+  seasonalThemeEnabled: true,
 };
 
 // --- Static data ---

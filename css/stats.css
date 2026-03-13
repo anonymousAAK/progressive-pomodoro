@@ -87,3 +87,34 @@
 
 /* ===== Cognitive load stat chip ===== */
 .stat-chip.cognitive .stat-value { font-size: 0.85rem; }
+
+/* ===== #47 Week Comparison ===== */
+.week-cmp-bars { display: flex; align-items: flex-end; gap: 4px; }
+
+/* ===== #51 Visualization Theme Picker ===== */
+.viz-theme-picker {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
+}
+.viz-theme-btn {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  background: var(--bg-card); border: 1px solid var(--border);
+  cursor: pointer; transition: var(--transition); color: var(--text-secondary);
+}
+.viz-theme-btn:hover { border-color: var(--accent-work); }
+.viz-theme-btn.active {
+  border-color: var(--accent-work);
+  background: rgba(99,102,241,0.1);
+  color: var(--text-primary);
+}
+
+/* ===== #58 Export report button ===== */
+#export-report-btn { width: 100%; }
+
+/* ===== Badge share button ===== */
+.badge-share-btn {
+  font-size: 0.6rem; padding: 2px 8px; margin-top: 4px;
+  background: var(--accent-work); color: #fff; border: none;
+  border-radius: 4px; cursor: pointer; transition: opacity 0.2s;
+}
+.badge-share-btn:hover { opacity: 0.85; }

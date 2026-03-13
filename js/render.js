@@ -185,6 +185,12 @@ export function renderStats() {
   renderComplexityFocusChart();
   renderCognitiveLoad();
   renderFocusSuggestion();
+  renderWeekComparison();
+  renderVizThemePicker();
+  renderCumulativeFocusGraph();
+  renderSessionGapAnalysis();
+  renderGoalVsActual();
+  setupExportReport();
 }
 
 // --- Calendar heatmap (last 35 days) ---
@@ -403,17 +409,54 @@ export function updateNextInfo() {
     : `Next: ${Math.round(state.workDuration / 60)} min work`;
 }
 
-// --- Celebration (confetti) ---
+// --- Celebration (#70 — style-aware) ---
+
+function _spawnConfetti(count, colors, delayMax, durMin) {
+  for (let i = 0; i < count; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.cssText = `left:${Math.random() * 100}%;top:-10px;background:${colors[Math.floor(Math.random() * colors.length)]};animation-delay:${Math.random() * delayMax}s;animation-duration:${durMin + Math.random()}s`;
+    dom.celebration.appendChild(c);
+  }
+}
+
+function _spawnFireworks(count, colors) {
+  for (let i = 0; i < count; i++) {
+    const fw = document.createElement('div');
+    fw.className = 'firework';
+    fw.style.cssText = `left:${10 + Math.random() * 80}%;top:${10 + Math.random() * 60}%;background:${colors[Math.floor(Math.random() * colors.length)]};animation-delay:${Math.random() * 1}s;`;
+    dom.celebration.appendChild(fw);
+  }
+}
+
+function _spawnSparkles(count, colors) {
+  for (let i = 0; i < count; i++) {
+    const sp = document.createElement('div');
+    sp.className = 'sparkle';
+    sp.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 100}%;color:${colors[Math.floor(Math.random() * colors.length)]};animation-delay:${Math.random() * 1.5}s;`;
+    dom.celebration.appendChild(sp);
+  }
+}
 
 export function showCelebration() {
+  const style = state.celebrationStyle || 'confetti';
+  if (style === 'none') return;
+
   dom.celebration.innerHTML = '';
   dom.celebration.classList.add('show');
   const colors = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
-  for (let i = 0; i < 40; i++) {
-    const c = document.createElement('div');
-    c.className = 'confetti';
-    c.style.cssText = `left:${Math.random() * 100}%;top:-10px;background:${colors[Math.floor(Math.random() * colors.length)]};animation-delay:${Math.random() * 0.5}s;animation-duration:${1.5 + Math.random()}s`;
-    dom.celebration.appendChild(c);
+
+  switch (style) {
+    case 'fireworks':
+      _spawnFireworks(20, colors);
+      break;
+    case 'sparkles':
+      _spawnSparkles(30, colors);
+      break;
+    case 'confetti':
+    default:
+      _spawnConfetti(40, colors, 0.5, 1.5);
+      break;
   }
   setTimeout(() => dom.celebration.classList.remove('show'), 2500);
 }
@@ -845,6 +888,412 @@ export function renderFocusSuggestion() {
   el.dataset.filled = 'true';
   state.lastSuggestionDate = today;
   localStorage.setItem('pp_lastSuggestionDate', today);
+}
+
+// --- #47 Week Comparison ---
+
+export function renderWeekComparison() {
+  const el = document.getElementById('week-comparison');
+  if (!el) return;
+  const today = new Date();
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const thisWeek = [];
+  const lastWeek = [];
+  for (let i = 6; i >= 0; i--) {
+    const d1 = new Date(today); d1.setDate(d1.getDate() - i);
+    const d2 = new Date(today); d2.setDate(d2.getDate() - i - 7);
+    const mins1 = state.sessionHistory.filter(s => s.date === d1.toDateString()).reduce((sum, s) => sum + s.duration, 0);
+    const mins2 = state.sessionHistory.filter(s => s.date === d2.toDateString()).reduce((sum, s) => sum + s.duration, 0);
+    thisWeek.push({ day: days[d1.getDay()], mins: Math.round(mins1) });
+    lastWeek.push({ day: days[d2.getDay()], mins: Math.round(mins2) });
+  }
+
+  const thisTotal = thisWeek.reduce((s, d) => s + d.mins, 0);
+  const lastTotal = lastWeek.reduce((s, d) => s + d.mins, 0);
+  const maxMins = Math.max(...thisWeek.map(d => d.mins), ...lastWeek.map(d => d.mins), 1);
+  const diff = thisTotal - lastTotal;
+  const diffSign = diff >= 0 ? '+' : '';
+  const diffColor = diff >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)';
+
+  el.innerHTML = `
+    <div class="week-cmp-summary" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:0.78rem;">
+      <span style="color:var(--text-secondary);">This week: <strong style="color:var(--accent-work);">${thisTotal}m</strong></span>
+      <span style="color:var(--text-secondary);">Last week: <strong style="color:var(--text-muted);">${lastTotal}m</strong></span>
+      <span style="color:${diffColor};font-weight:700;">${diffSign}${diff}m</span>
+    </div>
+    <div class="week-cmp-bars" style="display:flex;align-items:flex-end;gap:4px;">
+      ${thisWeek.map((d, i) => {
+        const h1 = (d.mins / maxMins) * 100;
+        const h2 = (lastWeek[i].mins / maxMins) * 100;
+        return `<div class="week-cmp-col" style="flex:1;display:flex;flex-direction:column;align-items:center;">
+          <div style="height:60px;width:100%;display:flex;align-items:flex-end;gap:2px;">
+            <div style="height:${h2}%;flex:1;background:var(--text-muted);opacity:0.3;border-radius:2px;" title="Last: ${lastWeek[i].mins}m"></div>
+            <div style="height:${h1}%;flex:1;background:var(--accent-work);border-radius:2px;" title="This: ${d.mins}m"></div>
+          </div>
+          <div style="font-size:0.55rem;color:var(--text-muted);text-align:center;margin-top:3px;">${d.day}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:12px;margin-top:8px;font-size:0.65rem;color:var(--text-muted);">
+      <span><span style="display:inline-block;width:8px;height:8px;background:var(--accent-work);border-radius:2px;margin-right:4px;"></span>This week</span>
+      <span><span style="display:inline-block;width:8px;height:8px;background:var(--text-muted);opacity:0.3;border-radius:2px;margin-right:4px;"></span>Last week</span>
+    </div>`;
+}
+
+// --- #51 Data Visualization Themes ---
+
+const VIZ_THEMES = {
+  default:  { name: 'Default',  colors: ['var(--accent-work)', 'var(--accent-break)', 'var(--accent-success)', 'var(--accent-warning)', 'var(--accent-danger)'] },
+  ocean:    { name: 'Ocean',    colors: ['#0ea5e9', '#06b6d4', '#14b8a6', '#2dd4bf', '#67e8f9'] },
+  sunset:   { name: 'Sunset',   colors: ['#f97316', '#ef4444', '#f59e0b', '#ec4899', '#fb923c'] },
+  forest:   { name: 'Forest',   colors: ['#22c55e', '#16a34a', '#84cc16', '#4ade80', '#a3e635'] },
+  neon:     { name: 'Neon',     colors: ['#a855f7', '#ec4899', '#6366f1', '#f43f5e', '#8b5cf6'] },
+  mono:     { name: 'Mono',     colors: ['#e5e7eb', '#9ca3af', '#6b7280', '#d1d5db', '#4b5563'] },
+};
+
+export function renderVizThemePicker() {
+  const el = document.getElementById('viz-theme-picker');
+  if (!el) return;
+  const current = state.vizTheme || 'default';
+  el.innerHTML = Object.entries(VIZ_THEMES).map(([key, theme]) => {
+    const activeClass = key === current ? ' active' : '';
+    const swatches = theme.colors.slice(0, 5).map(c => `<span style="width:10px;height:10px;border-radius:50%;background:${c};display:inline-block;"></span>`).join('');
+    return `<button class="viz-theme-btn${activeClass}" data-viz-theme="${key}" title="${theme.name}">
+      <span style="font-size:0.7rem;font-weight:600;">${theme.name}</span>
+      <span style="display:flex;gap:3px;margin-top:2px;">${swatches}</span>
+    </button>`;
+  }).join('');
+
+  el.querySelectorAll('.viz-theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.vizTheme = btn.dataset.vizTheme;
+      localStorage.setItem('pp_vizTheme', state.vizTheme);
+      const colors = VIZ_THEMES[state.vizTheme].colors;
+      document.documentElement.style.setProperty('--viz-color-1', colors[0]);
+      document.documentElement.style.setProperty('--viz-color-2', colors[1]);
+      document.documentElement.style.setProperty('--viz-color-3', colors[2]);
+      document.documentElement.style.setProperty('--viz-color-4', colors[3]);
+      document.documentElement.style.setProperty('--viz-color-5', colors[4]);
+      renderVizThemePicker();
+    });
+  });
+}
+
+// --- #54 Cumulative Focus Time Graph ---
+
+export function renderCumulativeFocusGraph() {
+  const svg = document.getElementById('cumulative-focus-svg');
+  if (!svg) return;
+
+  const today = new Date();
+  const weeks = [];
+  for (let w = 11; w >= 0; w--) {
+    const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() - w * 7);
+    const weekStart = new Date(weekEnd); weekStart.setDate(weekStart.getDate() - 6);
+    const weekMins = state.sessionHistory.filter(s => {
+      try {
+        const ts = new Date(s.timestamp);
+        return ts >= weekStart && ts <= weekEnd;
+      } catch { return false; }
+    }).reduce((sum, s) => sum + s.duration, 0);
+    weeks.push(weekMins);
+  }
+
+  const cumulative = [];
+  let runningTotal = 0;
+  weeks.forEach(m => { runningTotal += m; cumulative.push(runningTotal); });
+
+  if (runningTotal === 0) {
+    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="var(--text-muted)" font-size="10">No data yet</text>';
+    return;
+  }
+
+  const W = 300, H = 100, pad = 12;
+  const maxVal = Math.max(...cumulative, 1);
+  const xStep = (W - pad * 2) / 11;
+  const toX = i => pad + i * xStep;
+  const toY = v => H - pad - ((v / maxVal) * (H - pad * 2));
+
+  const linePoints = cumulative.map((v, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
+  const areaPath = `${linePoints} L${toX(11).toFixed(1)},${H - pad} L${toX(0).toFixed(1)},${H - pad} Z`;
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="cumGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--accent-work)" stop-opacity="0.4"/>
+        <stop offset="100%" stop-color="var(--accent-work)" stop-opacity="0.02"/>
+      </linearGradient>
+    </defs>
+    <path d="${areaPath}" fill="url(#cumGrad)"/>
+    <path d="${linePoints}" fill="none" stroke="var(--accent-work)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${cumulative.map((v, i) => `<circle cx="${toX(i).toFixed(1)}" cy="${toY(v).toFixed(1)}" r="2.5" fill="var(--accent-work)"/>`).join('')}
+    <text x="${toX(0)}" y="${H - 1}" fill="var(--text-muted)" font-size="7">12w ago</text>
+    <text x="${toX(11) - 20}" y="${H - 1}" fill="var(--text-muted)" font-size="7">Now</text>
+    <text x="${toX(11) + 4}" y="${toY(cumulative[11]).toFixed(1)}" fill="var(--accent-work)" font-size="8" font-weight="700">${(runningTotal / 60).toFixed(1)}h</text>`;
+}
+
+// --- #55 Session Gap Analysis ---
+
+export function renderSessionGapAnalysis() {
+  const el = document.getElementById('session-gap-analysis');
+  if (!el) return;
+
+  const sessions = [...state.sessionHistory].filter(s => s.timestamp);
+  if (sessions.length < 2) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Need 2+ sessions with timestamps for gap analysis</p>';
+    return;
+  }
+
+  const sorted = sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  const gaps = [];
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const s1 = sorted[i];
+    const s2 = sorted[i + 1];
+    if (s1.date !== s2.date) continue;
+    try {
+      const t1 = new Date(s1.timestamp).getTime();
+      const t2 = new Date(s2.timestamp).getTime();
+      const gapMins = Math.round((t1 - t2) / 60000);
+      if (gapMins > 0 && gapMins < 480) {
+        gaps.push(gapMins);
+      }
+    } catch {}
+  }
+
+  if (gaps.length === 0) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Not enough same-day session pairs yet</p>';
+    return;
+  }
+
+  const avgGap = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
+  const minGap = Math.min(...gaps);
+  const maxGap = Math.max(...gaps);
+
+  const buckets = [
+    { label: '<5m',     min: 0,  max: 5 },
+    { label: '5-15m',   min: 5,  max: 15 },
+    { label: '15-30m',  min: 15, max: 30 },
+    { label: '30-60m',  min: 30, max: 60 },
+    { label: '60m+',    min: 60, max: Infinity },
+  ];
+  buckets.forEach(b => {
+    b.count = gaps.filter(g => g >= b.min && g < b.max).length;
+  });
+  const maxCount = Math.max(...buckets.map(b => b.count), 1);
+
+  let procrastinationNote = '';
+  if (avgGap > 45) procrastinationNote = '<p style="font-size:0.72rem;color:var(--accent-warning);margin-top:8px;">Long average gaps may indicate procrastination between sessions. Try session chaining!</p>';
+  else if (avgGap < 10) procrastinationNote = '<p style="font-size:0.72rem;color:var(--accent-success);margin-top:8px;">Great momentum! You move quickly between sessions.</p>';
+
+  el.innerHTML = `
+    <div style="display:flex;gap:16px;margin-bottom:10px;font-size:0.78rem;">
+      <div style="text-align:center;"><div style="font-weight:700;color:var(--accent-work);">${avgGap}m</div><div style="font-size:0.65rem;color:var(--text-muted);">Avg Gap</div></div>
+      <div style="text-align:center;"><div style="font-weight:700;color:var(--accent-success);">${minGap}m</div><div style="font-size:0.65rem;color:var(--text-muted);">Shortest</div></div>
+      <div style="text-align:center;"><div style="font-weight:700;color:var(--accent-warning);">${maxGap}m</div><div style="font-size:0.65rem;color:var(--text-muted);">Longest</div></div>
+    </div>
+    ${buckets.map(b => `
+    <div class="dur-dist-item">
+      <div class="dur-dist-label">${b.label}</div>
+      <div class="dur-dist-track"><div class="dur-dist-bar" style="width:${(b.count / maxCount) * 100}%"></div></div>
+      <div class="dur-dist-count">${b.count}</div>
+    </div>`).join('')}
+    ${procrastinationNote}`;
+}
+
+// --- #56 Goal vs Actual Comparison ---
+
+export function renderGoalVsActual() {
+  const el = document.getElementById('goal-vs-actual');
+  if (!el) return;
+
+  const target = state.sessionTarget;
+  if (!target || target <= 0) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Set a daily session target in Settings to compare goals with actual performance.</p>';
+    return;
+  }
+
+  const today = new Date();
+  const dayArr = [];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const dateStr = d.toDateString();
+    const actual = state.sessionHistory.filter(s => s.date === dateStr).length;
+    dayArr.push({ name: dayNames[d.getDay()], actual, goal: target, isToday: i === 0 });
+  }
+
+  const maxVal = Math.max(target, ...dayArr.map(d => d.actual), 1);
+  const hitDays = dayArr.filter(d => d.actual >= d.goal).length;
+  const totalActual = dayArr.reduce((s, d) => s + d.actual, 0);
+  const totalGoal = target * 7;
+  const completionPct = Math.round((totalActual / totalGoal) * 100);
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:0.78rem;">
+      <span style="color:var(--text-secondary);">Goal hit: <strong style="color:var(--accent-work);">${hitDays}/7 days</strong></span>
+      <span style="color:var(--text-secondary);">Completion: <strong style="color:${completionPct >= 80 ? 'var(--accent-success)' : completionPct >= 50 ? 'var(--accent-warning)' : 'var(--accent-danger)'};">${completionPct}%</strong></span>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:6px;height:70px;">
+      ${dayArr.map(d => {
+        const goalH = (d.goal / maxVal) * 100;
+        const actualH = (d.actual / maxVal) * 100;
+        const barColor = d.actual >= d.goal ? 'var(--accent-success)' : 'var(--accent-work)';
+        const todayStyle = d.isToday ? 'outline:1px solid var(--accent-work);outline-offset:1px;' : '';
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;">
+          <div style="flex:1;width:100%;display:flex;align-items:flex-end;gap:1px;position:relative;">
+            <div style="flex:1;height:${goalH}%;background:var(--text-muted);opacity:0.15;border-radius:2px;" title="Goal: ${d.goal}"></div>
+            <div style="flex:1;height:${actualH}%;background:${barColor};border-radius:2px;${todayStyle}" title="Actual: ${d.actual}"></div>
+          </div>
+          <div style="font-size:0.55rem;color:var(--text-muted);margin-top:3px;">${d.name}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:12px;margin-top:8px;font-size:0.65rem;color:var(--text-muted);">
+      <span><span style="display:inline-block;width:8px;height:8px;background:var(--text-muted);opacity:0.15;border-radius:2px;margin-right:4px;"></span>Goal (${target}/day)</span>
+      <span><span style="display:inline-block;width:8px;height:8px;background:var(--accent-work);border-radius:2px;margin-right:4px;"></span>Actual</span>
+    </div>`;
+}
+
+// --- #58 Exportable Reports (Canvas-based image export) ---
+
+export function setupExportReport() {
+  const btn = document.getElementById('export-report-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => exportReportAsImage());
+}
+
+function exportReportAsImage() {
+  const sessions = state.sessionHistory;
+  const totalMins = sessions.reduce((sum, s) => sum + s.duration, 0);
+  const totalHours = (totalMins / 60).toFixed(1);
+  const today = new Date();
+
+  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 6);
+  const weekSessions = sessions.filter(s => {
+    try { return new Date(s.timestamp) >= weekAgo; } catch { return false; }
+  });
+  const weekMins = weekSessions.reduce((sum, s) => sum + s.duration, 0);
+
+  const counts = { Distracted: 0, Okay: 0, Focused: 0, Flow: 0 };
+  sessions.forEach(s => { if (counts[s.rating] !== undefined) counts[s.rating]++; });
+
+  const dailyData = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const dateStr = d.toDateString();
+    const mins = sessions.filter(s => s.date === dateStr).reduce((sum, s) => sum + s.duration, 0);
+    const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    dailyData.push({ day: dayName, mins: Math.round(mins) });
+  }
+
+  const canvas = document.createElement('canvas');
+  const W = 600, H = 440;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#0f0f17';
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 20px Inter, sans-serif';
+  ctx.fillText('Progressive Pomodoro - Focus Report', 24, 36);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '12px Inter, sans-serif';
+  ctx.fillText(`Generated: ${today.toLocaleDateString()}`, 24, 56);
+
+  // Summary stats
+  const statsY = 80;
+  const statBoxes = [
+    { label: 'Total Focus', value: `${totalHours}h`, color: '#6366f1' },
+    { label: 'Sessions', value: `${sessions.length}`, color: '#06b6d4' },
+    { label: 'This Week', value: `${Math.round(weekMins)}m`, color: '#10b981' },
+    { label: 'Streak', value: `${state.streakData.current}d`, color: '#f59e0b' },
+  ];
+  statBoxes.forEach((box, i) => {
+    const x = 24 + i * 140;
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath();
+    ctx.roundRect(x, statsY, 125, 60, 8);
+    ctx.fill();
+    ctx.fillStyle = box.color;
+    ctx.font = 'bold 22px JetBrains Mono, monospace';
+    ctx.fillText(box.value, x + 12, statsY + 30);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillText(box.label, x + 12, statsY + 48);
+  });
+
+  // Weekly bar chart
+  const chartY = 165;
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 13px Inter, sans-serif';
+  ctx.fillText('Last 7 Days', 24, chartY);
+
+  const maxDayMins = Math.max(...dailyData.map(d => d.mins), 1);
+  const barW = 60, barGap = 14, chartBaseY = chartY + 130;
+  dailyData.forEach((d, i) => {
+    const x = 24 + i * (barW + barGap);
+    const barH = Math.max(2, (d.mins / maxDayMins) * 100);
+    ctx.fillStyle = '#6366f1';
+    ctx.beginPath();
+    ctx.roundRect(x, chartBaseY - barH, barW, barH, 3);
+    ctx.fill();
+    if (d.mins > 0) {
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillText(`${d.mins}m`, x + 14, chartBaseY - barH - 6);
+    }
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillText(d.day, x + 18, chartBaseY + 14);
+  });
+
+  // Focus distribution
+  const distY = chartBaseY + 40;
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 13px Inter, sans-serif';
+  ctx.fillText('Focus Distribution', 24, distY);
+
+  const distColors = { Distracted: '#ef4444', Okay: '#f59e0b', Focused: '#6366f1', Flow: '#10b981' };
+  const total = sessions.length || 1;
+  let dx = 24;
+  Object.entries(counts).forEach(([key, val]) => {
+    const pct = (val / total) * 100;
+    const w = Math.max(2, (pct / 100) * 530);
+    ctx.fillStyle = distColors[key];
+    ctx.beginPath();
+    ctx.roundRect(dx, distY + 12, w, 12, 3);
+    ctx.fill();
+    dx += w + 4;
+  });
+
+  // Legend
+  let lx = 24;
+  const legY = distY + 36;
+  Object.entries(counts).forEach(([key, val]) => {
+    ctx.fillStyle = distColors[key];
+    ctx.fillRect(lx, legY, 8, 8);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillText(`${key} (${val})`, lx + 12, legY + 8);
+    lx += ctx.measureText(`${key} (${val})`).width + 24;
+  });
+
+  // Watermark
+  ctx.fillStyle = '#4a4a5a';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.fillText('progressivepomodoro.app', W - 160, H - 12);
+
+  // Download
+  const link = document.createElement('a');
+  link.download = `focus-report-${today.toISOString().split('T')[0]}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
 
 // --- Session Chain Render (#11) ---

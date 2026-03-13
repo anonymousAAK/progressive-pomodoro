@@ -1,6 +1,6 @@
 import { state, POMODOROS_BEFORE_LONG_BREAK, BREAK_ACTIVITIES } from './state.js';
 import { dom } from './dom.js';
-import { playSound } from './audio.js';
+import { playSound, playNotificationSound } from './audio.js';
 import { updateTimerDisplay, updateNextInfo, renderSessionDots, showCelebration, showToast, showAffirmation } from './render.js';
 import { sendEnhancedNotification, hapticFeedback, announceToScreenReader } from './features-batch5.js';
 
@@ -396,7 +396,7 @@ function _onTimerComplete() {
   }
 
   if (state.currentMode === 'work') {
-    playSound('work-end');
+    playNotificationSound(); // #66 custom notification sound
     hapticFeedback('timer-end');
     // #118 Enhanced notifications with actions
     sendEnhancedNotification('work-end');
@@ -411,7 +411,7 @@ function _onTimerComplete() {
     announceToScreenReader('Work session complete. Please rate your focus.');
     if (_onWorkComplete) _onWorkComplete();
   } else {
-    playSound('break-end');
+    playNotificationSound(); // #66 custom notification sound
     hapticFeedback('timer-end');
     // #118 Enhanced notifications with actions
     sendEnhancedNotification('break-end');
