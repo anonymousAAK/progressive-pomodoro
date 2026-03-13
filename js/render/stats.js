@@ -1,130 +1,23 @@
-import { state, ACHIEVEMENTS, DAILY_CHALLENGES, RING_CIRCUMFERENCE, POMODOROS_BEFORE_LONG_BREAK, AFFIRMATIONS, MOOD_OPTIONS } from './state.js';
-import { saveTaskQueue, saveSessionChain, saveRecurringTasks, saveTaskTemplates, getProfileStats } from './storage.js';
-import { dom } from './dom.js';
+/**
+ * @module render/stats
+ * Statistics and analytics rendering: heatmap, records, achievements,
+ * daily challenge, weekly summary, hourly chart, duration distribution,
+ * rating trend, day-of-week chart, task history, focus zone, mood distribution,
+ * complexity-focus chart, focus suggestion, week comparison, viz theme picker,
+ * cumulative focus graph, session gap analysis, goal vs actual, and export report.
+ */
 
-// --- Utilities ---
+import { state, ACHIEVEMENTS, DAILY_CHALLENGES, MOOD_OPTIONS } from '../state.js';
+import { dom } from '../dom.js';
+import { escapeHtml } from './utils.js';
+import { renderFocusScore, renderCognitiveLoad } from './ui.js';
+import { renderLeaderboard } from './profiles.js';
 
-function escapeHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-function formatTime(seconds) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-// --- Top stats bar ---
-
-export function updateTopStats() {
-  const today = new Date().toDateString();
-  const todaySessions = state.sessionHistory.filter(s => s.date === today);
-  const todayMins = todaySessions.reduce((sum, s) => sum + s.duration, 0);
-
-  // Streak with shield count
-  const shieldStr = state.streakShields > 0 ? ` 🛡️${state.streakShields}` : '';
-  dom.streakValue.textContent  = state.streakData.current + shieldStr;
-  dom.todayMinutes.textContent = todayMins >= 60
-    ? `${(todayMins / 60).toFixed(1)}h`
-    : `${Math.round(todayMins)}m`;
-  dom.sessionCount.textContent = todaySessions.length;
-  if (dom.xpValue) dom.xpValue.textContent = 'Lv.' + state.level;
-  renderSessionTarget();
-  renderFocusScore();
-  renderCognitiveLoad();
-}
-
-// --- Ring progress ---
-
-export function updateRing(percent) {
-  const offset = RING_CIRCUMFERENCE * (1 - percent);
-  dom.ringProgress.style.strokeDashoffset = offset;
-  dom.ringProgress.classList.toggle('break-mode', state.currentMode !== 'work');
-}
-
-// --- Session dots ---
-
-export function renderSessionDots() {
-  const TOTAL = POMODOROS_BEFORE_LONG_BREAK;
-  dom.sessionDots.innerHTML = '';
-  for (let i = 0; i < TOTAL; i++) {
-    const dot = document.createElement('div');
-    dot.className = 'session-dot';
-    if (i < state.completedPomodoros) dot.classList.add('completed');
-    if (i === state.completedPomodoros && state.currentMode === 'work') dot.classList.add('active');
-    if (i === TOTAL - 1 && state.completedPomodoros >= TOTAL) dot.classList.add('long-break');
-    dom.sessionDots.appendChild(dot);
-  }
-}
-
-// --- History list ---
-
-const RATING_EMOJI = { Distracted: '😵‍💫', Okay: '😐', Focused: '🎯', Flow: '🚀' };
-const CATEGORY_ICON = { work: '💼', study: '📚', creative: '🎨', admin: '📋', personal: '🏠', health: '❤️' };
-
-export function renderHistory() {
-  if (state.sessionHistory.length === 0) {
-    dom.historyList.innerHTML = `
-      <div class="history-empty">
-        <div class="empty-icon">📋</div>
-        <p>No sessions yet. Start your first pomodoro!</p>
-      </div>`;
-    return;
-  }
-
-  dom.historyList.innerHTML = state.sessionHistory.slice(0, 50).map(entry => {
-    const ratingClass = entry.rating.toLowerCase();
-    const catIcon = CATEGORY_ICON[entry.category] || '⚡';
-    return `
-    <div class="history-item">
-      <div class="h-icon work">${catIcon}</div>
-      <div class="h-details">
-        <div class="h-task">${escapeHtml(entry.task || 'Untitled')}</div>
-        <div class="h-meta">${entry.duration}m${entry.overtime ? ` +${Math.round(entry.overtime / 60)}m OT` : ''} · ${entry.displayTime || ''}${entry.mood ? ` · ${MOOD_OPTIONS.find(m=>m.value===entry.mood)?.emoji||''}` : ''}${entry.complexity ? ` · ${'★'.repeat(entry.complexity)}` : ''}${entry.distractions ? ` · ${entry.distractions} dist.` : ''}${entry.note ? ` · "${escapeHtml(entry.note)}"` : ''}</div>
-      </div>
-      <span class="h-rating ${ratingClass}">${entry.rating}</span>
-    </div>`;
-  }).join('');
-}
-
-// --- Weekly bar chart ---
-
-export function renderWeeklyChart() {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const today = new Date();
-  const weekData = [];
-
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toDateString();
-    const mins = state.sessionHistory
-      .filter(s => s.date === dateStr)
-      .reduce((sum, s) => sum + s.duration, 0);
-    weekData.push({ day: days[d.getDay()], mins: Math.round(mins), isToday: i === 0 });
-  }
-
-  const maxMins = Math.max(...weekData.map(d => d.mins), 1);
-
-  dom.weeklyChart.innerHTML = weekData.map(d => {
-    const heightPct = (d.mins / maxMins) * 100;
-    const todayStyle = d.isToday ? 'background:linear-gradient(180deg,var(--accent-success),rgba(16,185,129,0.4))' : '';
-    const todayLabel = d.isToday ? 'color:var(--accent-success);font-weight:700' : '';
-    return `
-    <div class="chart-bar-wrapper">
-      <div class="chart-value">${d.mins > 0 ? d.mins + 'm' : ''}</div>
-      <div class="chart-bar-track">
-        <div class="chart-bar" style="height:${heightPct}%;${todayStyle}"></div>
-      </div>
-      <div class="chart-label" style="${todayLabel}">${d.day}</div>
-    </div>`;
-  }).join('');
-}
-
-// --- Stats page ---
-
+/**
+ * Render the main stats page.
+ * @description Computes summary statistics and delegates to all sub-renderers.
+ * @returns {void}
+ */
 export function renderStats() {
   const sessions = state.sessionHistory;
   const totalMins  = sessions.reduce((sum, s) => sum + s.duration, 0);
@@ -194,8 +87,11 @@ export function renderStats() {
   renderLeaderboard();
 }
 
-// --- Calendar heatmap (last 35 days) ---
-
+/**
+ * Render a 35-day calendar heatmap.
+ * @description Shows a grid of cells coloured by daily focus minutes.
+ * @returns {void}
+ */
 export function renderHeatmap() {
   if (!dom.heatmapGrid) return;
   const today = new Date();
@@ -215,8 +111,11 @@ export function renderHeatmap() {
   dom.heatmapGrid.innerHTML = cells;
 }
 
-// --- Personal records ---
-
+/**
+ * Render personal records (longest session, best day, most sessions in a day).
+ * @description Computes records from session history and displays them as cards.
+ * @returns {void}
+ */
 export function renderRecords() {
   if (!dom.recordsGrid) return;
   const sessions = state.sessionHistory;
@@ -253,8 +152,11 @@ export function renderRecords() {
     </div>`;
 }
 
-// --- Achievements ---
-
+/**
+ * Render the achievements/badges grid.
+ * @description Shows all achievements, marking unlocked ones and providing share buttons.
+ * @returns {void}
+ */
 export function renderAchievements() {
   if (!dom.achievementsGrid) return;
   dom.achievementsGrid.innerHTML = ACHIEVEMENTS.map(a => {
@@ -271,8 +173,11 @@ export function renderAchievements() {
   }).join('');
 }
 
-// --- Daily challenge ---
-
+/**
+ * Render today's daily challenge status.
+ * @description Picks the challenge for the current day-of-year and checks completion.
+ * @returns {void}
+ */
 export function renderDailyChallenge() {
   if (!dom.challengeDesc || !dom.challengeStatus) return;
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
@@ -283,261 +188,11 @@ export function renderDailyChallenge() {
   dom.challengeStatus.style.color   = done ? 'var(--accent-success)' : 'var(--text-muted)';
 }
 
-// --- Task queue ---
-
-export function renderTaskQueue() {
-  const list = document.getElementById('task-queue-list');
-  const progress = document.getElementById('task-progress');
-  if (!list) return;
-
-  // Filter based on archive state (#40)
-  const showArchived = state.showArchived;
-  const visibleTasks = showArchived ? state.taskQueue : state.taskQueue.filter(t => !t.archived);
-
-  if (visibleTasks.length === 0) {
-    list.innerHTML = '<div class="tasks-empty">No tasks yet. Add one above!</div>';
-    if (progress) progress.textContent = '';
-    return;
-  }
-  const done = state.taskQueue.filter(t => t.done).length;
-  if (progress) progress.textContent = `Completed: ${done}/${state.taskQueue.length}`;
-
-  list.innerHTML = visibleTasks.map(task => {
-    // Estimate progress (#34)
-    const estimateHtml = task.estimate > 0
-      ? `<span class="task-estimate">${task.pomodorosCompleted || 0}/${task.estimate} poms</span>`
-      : '';
-    // Subtasks (#35)
-    const subtasks = task.subtasks || [];
-    const subtaskHtml = subtasks.length > 0 ? `
-      <div class="subtask-list">
-        ${subtasks.map((st, i) => `
-          <label class="subtask-item" data-task-id="${task.id}" data-subtask-idx="${i}">
-            <input type="checkbox" class="subtask-check" ${st.done ? 'checked' : ''}>
-            <span class="${st.done ? 'done-text' : ''}">${escapeHtml(st.text)}</span>
-          </label>`).join('')}
-        <div class="subtask-progress-bar"><div class="subtask-progress-fill" style="width:${subtasks.length > 0 ? (subtasks.filter(s=>s.done).length/subtasks.length*100) : 0}%"></div></div>
-      </div>` : '';
-    const archivedClass = task.archived ? ' archived' : '';
-    return `
-    <div class="task-item${task.done ? ' done' : ''}${archivedClass}" data-id="${task.id}" draggable="true">
-      <div class="drag-handle" title="Drag to reorder">⠿</div>
-      <div class="task-item-check${task.done ? ' checked' : ''}">${task.done ? '✓' : ''}</div>
-      <div class="priority-dot ${task.priority}"></div>
-      <div class="task-item-body">
-        <div class="task-item-name${task.done ? ' done-text' : ''}">${escapeHtml(task.name)} ${estimateHtml}</div>
-        ${subtaskHtml}
-      </div>
-      <div class="task-item-actions">
-        <button class="btn-focus-task" title="Focus on this task">▶</button>
-        <button class="btn-add-subtask" title="Add subtask">+</button>
-        ${task.done && !task.archived ? '<button class="btn-archive-task" title="Archive">📦</button>' : ''}
-        <button class="btn-delete-task" title="Delete" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;padding:4px;">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  // Set up drag and drop (#42)
-  setupDragAndDrop(list);
-}
-
-function setupDragAndDrop(list) {
-  let draggedId = null;
-  list.querySelectorAll('.task-item[draggable]').forEach(item => {
-    item.addEventListener('dragstart', e => {
-      draggedId = parseInt(item.dataset.id, 10);
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    item.addEventListener('dragend', () => {
-      item.classList.remove('dragging');
-      draggedId = null;
-    });
-    item.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      item.classList.add('drag-over');
-    });
-    item.addEventListener('dragleave', () => {
-      item.classList.remove('drag-over');
-    });
-    item.addEventListener('drop', e => {
-      e.preventDefault();
-      item.classList.remove('drag-over');
-      const targetId = parseInt(item.dataset.id, 10);
-      if (draggedId === null || draggedId === targetId) return;
-      const fromIdx = state.taskQueue.findIndex(t => t.id === draggedId);
-      const toIdx = state.taskQueue.findIndex(t => t.id === targetId);
-      if (fromIdx < 0 || toIdx < 0) return;
-      const [moved] = state.taskQueue.splice(fromIdx, 1);
-      state.taskQueue.splice(toIdx, 0, moved);
-      saveTaskQueue();
-      renderTaskQueue();
-    });
-  });
-}
-
-// --- Toast ---
-
-export function showToast(msg) {
-  dom.saveToast.textContent = msg;
-  dom.saveToast.classList.add('show');
-  setTimeout(() => dom.saveToast.classList.remove('show'), 2500);
-}
-
-// --- Timer display (called by timer.js) ---
-
-export function updateTimerDisplay(secondsLeft, totalSeconds, currentMode, timerInterval) {
-  // secondsLeft may be "elapsed" if countUp mode is active (passed adjusted from timer.js)
-  dom.timerDisplay.textContent = formatTime(secondsLeft);
-  // Ring always uses actual remaining seconds (caller passes correct value for display,
-  // but ring percent is based on elapsed regardless of count-up mode)
-  const elapsed = state.countUp ? secondsLeft : (totalSeconds - secondsLeft);
-  const percent = totalSeconds > 0 ? elapsed / totalSeconds : 0;
-  dom.ringProgress.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - percent);
-  dom.ringProgress.classList.toggle('break-mode', currentMode !== 'work');
-
-  const displayForTitle = state.countUp ? secondsLeft : secondsLeft;
-  document.title = timerInterval
-    ? `${formatTime(secondsLeft)} - ${currentMode === 'work' ? 'Work' : 'Break'} | Progressive Pomodoro`
-    : 'Progressive Pomodoro';
-}
-
-export function updateNextInfo() {
-  if (!dom.timerNextInfo) return;
-  dom.timerNextInfo.textContent = state.currentMode === 'work'
-    ? `Next: ${Math.round(state.breakDuration / 60)} min break`
-    : `Next: ${Math.round(state.workDuration / 60)} min work`;
-}
-
-// --- Celebration (#70 — style-aware) ---
-
-function _spawnConfetti(count, colors, delayMax, durMin) {
-  for (let i = 0; i < count; i++) {
-    const c = document.createElement('div');
-    c.className = 'confetti';
-    c.style.cssText = `left:${Math.random() * 100}%;top:-10px;background:${colors[Math.floor(Math.random() * colors.length)]};animation-delay:${Math.random() * delayMax}s;animation-duration:${durMin + Math.random()}s`;
-    dom.celebration.appendChild(c);
-  }
-}
-
-function _spawnFireworks(count, colors) {
-  for (let i = 0; i < count; i++) {
-    const fw = document.createElement('div');
-    fw.className = 'firework';
-    fw.style.cssText = `left:${10 + Math.random() * 80}%;top:${10 + Math.random() * 60}%;background:${colors[Math.floor(Math.random() * colors.length)]};animation-delay:${Math.random() * 1}s;`;
-    dom.celebration.appendChild(fw);
-  }
-}
-
-function _spawnSparkles(count, colors) {
-  for (let i = 0; i < count; i++) {
-    const sp = document.createElement('div');
-    sp.className = 'sparkle';
-    sp.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 100}%;color:${colors[Math.floor(Math.random() * colors.length)]};animation-delay:${Math.random() * 1.5}s;`;
-    dom.celebration.appendChild(sp);
-  }
-}
-
-export function showCelebration() {
-  const style = state.celebrationStyle || 'confetti';
-  if (style === 'none') return;
-
-  dom.celebration.innerHTML = '';
-  dom.celebration.classList.add('show');
-  const colors = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
-
-  switch (style) {
-    case 'fireworks':
-      _spawnFireworks(20, colors);
-      break;
-    case 'sparkles':
-      _spawnSparkles(30, colors);
-      break;
-    case 'confetti':
-    default:
-      _spawnConfetti(40, colors, 0.5, 1.5);
-      break;
-  }
-  setTimeout(() => dom.celebration.classList.remove('show'), 2500);
-}
-
-// --- Milestone celebration ---
-
-export function showMilestoneCelebration(n) {
-  dom.celebration.innerHTML = '';
-  dom.celebration.classList.add('show');
-  const colors = ['#f59e0b', '#fbbf24', '#fcd34d', '#6366f1', '#8b5cf6', '#ec4899', '#10b981', '#06b6d4'];
-  for (let i = 0; i < 80; i++) {
-    const c = document.createElement('div');
-    c.className = 'confetti';
-    c.style.cssText = `left:${Math.random() * 100}%;top:-10px;background:${colors[Math.floor(Math.random() * colors.length)]};animation-delay:${Math.random() * 0.8}s;animation-duration:${1.5 + Math.random() * 1.5}s`;
-    dom.celebration.appendChild(c);
-  }
-  // Overlay message
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,15,0.92);border:2px solid #f59e0b;border-radius:16px;padding:24px 32px;font-size:1.4rem;font-weight:700;color:#fcd34d;text-align:center;z-index:200;';
-  overlay.textContent = `🎉 Session #${n}!`;
-  document.body.appendChild(overlay);
-  setTimeout(() => { dom.celebration.classList.remove('show'); overlay.remove(); }, 3500);
-}
-
-// --- Affirmation overlay ---
-
-export function showAffirmation() {
-  if (!dom.affirmationOverlay) return;
-  dom.affirmationOverlay.textContent = AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)];
-  dom.affirmationOverlay.classList.add('show');
-  setTimeout(() => dom.affirmationOverlay.classList.remove('show'), 2500);
-}
-
-// --- Session target ---
-
-export function renderSessionTarget() {
-  if (!dom.sessionTargetRow) return;
-  if (!state.sessionTarget || state.sessionTarget <= 0) {
-    dom.sessionTargetRow.classList.add('hidden');
-    return;
-  }
-  const today = new Date().toDateString();
-  const count = state.sessionHistory.filter(s => s.date === today).length;
-  dom.sessionTargetRow.classList.remove('hidden');
-  if (dom.sessionTargetText) dom.sessionTargetText.textContent = `${count} / ${state.sessionTarget} today`;
-  if (dom.targetBarFill) {
-    const pct = Math.min(100, (count / state.sessionTarget) * 100);
-    dom.targetBarFill.style.width = pct + '%';
-  }
-}
-
-// --- Focus score ---
-
-export function renderFocusScore() {
-  const banner = document.getElementById('focus-score-banner');
-  const valueEl = document.getElementById('focus-score-value');
-  if (!banner || !valueEl) return;
-  const today = new Date().toDateString();
-  const todaySessions = state.sessionHistory.filter(s => s.date === today);
-  if (todaySessions.length === 0) { valueEl.textContent = '—'; return; }
-  const ratingScore = { Distracted: 0, Okay: 33, Focused: 66, Flow: 100 };
-  const avg = todaySessions.reduce((sum, s) => sum + (ratingScore[s.rating] || 0), 0) / todaySessions.length;
-  const factor = Math.min(1, todaySessions.length / 4);
-  const score = Math.round(avg * (0.7 + 0.3 * factor));
-  valueEl.textContent = score;
-}
-
-// --- Focus trend alert ---
-
-export function checkFocusTrend() {
-  const last3 = state.sessionHistory.slice(0, 3);
-  if (last3.length < 3) return;
-  const allLow = last3.every(s => s.rating === 'Distracted' || s.rating === 'Okay');
-  if (allLow) {
-    setTimeout(() => showToast('⚠️ Focus has been low lately — consider a break or change of environment'), 600);
-  }
-}
-
-// --- Weekly summary ---
-
+/**
+ * Render the weekly summary text.
+ * @description Summarises this week's sessions, best day, top rating, and streak.
+ * @returns {void}
+ */
 export function renderWeeklySummary() {
   const el = document.getElementById('weekly-summary-text');
   if (!el) return;
@@ -562,8 +217,11 @@ export function renderWeeklySummary() {
   el.textContent = `This week: ${weekSessions.length} session${weekSessions.length !== 1 ? 's' : ''}, ${hours}h focus time. Best day: ${bestDayName} with ${bestDay[1]} session${bestDay[1] !== 1 ? 's' : ''}. Most common rating: ${topRating}.${streakLine}`;
 }
 
-// --- Hourly chart ---
-
+/**
+ * Render the hourly activity bar chart (6am-11pm).
+ * @description Aggregates focus minutes by hour and renders vertical bars.
+ * @returns {void}
+ */
 export function renderHourlyChart() {
   if (!dom.hourlyChart) return;
   const hourMins = new Array(24).fill(0);
@@ -590,8 +248,11 @@ export function renderHourlyChart() {
   }).join('');
 }
 
-// --- Duration distribution ---
-
+/**
+ * Render the session duration distribution chart.
+ * @description Buckets sessions by duration and shows horizontal bars.
+ * @returns {void}
+ */
 export function renderDurationDistribution() {
   const el = document.getElementById('duration-dist');
   if (!el) return;
@@ -616,8 +277,11 @@ export function renderDurationDistribution() {
     </div>`).join('');
 }
 
-// --- Rating trend (SVG sparkline) ---
-
+/**
+ * Render the 14-day rating trend sparkline (SVG).
+ * @description Plots average daily rating over the last 14 days as a line chart.
+ * @returns {void}
+ */
 export function renderRatingTrend() {
   const svg = document.getElementById('rating-trend-svg');
   if (!svg) return;
@@ -658,8 +322,11 @@ export function renderRatingTrend() {
     ${validPoints.map(p => `<circle cx="${toX(p.x).toFixed(1)}" cy="${toY(p.y).toFixed(1)}" r="3" fill="var(--accent-work)"/>`).join('')}`;
 }
 
-// --- Day of week chart ---
-
+/**
+ * Render the day-of-week average focus chart.
+ * @description Shows average focus minutes per weekday as vertical bars.
+ * @returns {void}
+ */
 export function renderDayOfWeekChart() {
   if (!dom.dowChart) return;
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -687,8 +354,11 @@ export function renderDayOfWeekChart() {
   }).join('');
 }
 
-// --- Task history ---
-
+/**
+ * Render the top-8 tasks by total focus time.
+ * @description Aggregates duration by task name and shows horizontal bars.
+ * @returns {void}
+ */
 export function renderTaskHistory() {
   const el = document.getElementById('task-history');
   if (!el) return;
@@ -708,8 +378,11 @@ export function renderTaskHistory() {
     </div>`).join('');
 }
 
-// --- Focus Zone Detection (#19) ---
-
+/**
+ * Render the focus zone detection display.
+ * @description Finds the hour with the highest average rating and displays it.
+ * @returns {void}
+ */
 export function renderFocusZone() {
   const el = document.getElementById('focus-zone-display');
   if (!el) return;
@@ -738,8 +411,11 @@ export function renderFocusZone() {
     <p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Avg rating: ${bestAvg.toFixed(1)}/4 across ${hourCounts[bestHour]} sessions</p>`;
 }
 
-// --- Mood Distribution (#21) ---
-
+/**
+ * Render the mood distribution chart.
+ * @description Shows how often each mood was selected across all sessions.
+ * @returns {void}
+ */
 export function renderMoodDistribution() {
   const el = document.getElementById('mood-distribution');
   if (!el) return;
@@ -760,8 +436,11 @@ export function renderMoodDistribution() {
   }).join('');
 }
 
-// --- Complexity vs Focus Chart (#28) ---
-
+/**
+ * Render the complexity vs focus rating chart.
+ * @description Shows average focus rating for each complexity level (1-5 stars).
+ * @returns {void}
+ */
 export function renderComplexityFocusChart() {
   const el = document.getElementById('complexity-focus-chart');
   if (!el) return;
@@ -788,29 +467,12 @@ export function renderComplexityFocusChart() {
   }).join('');
 }
 
-// --- Cognitive Load Indicator (#29) ---
-
-export function renderCognitiveLoad() {
-  const el = dom.cognitiveLoadValue;
-  if (!el) return;
-  const today = new Date().toDateString();
-  const todaySessions = state.sessionHistory.filter(s => s.date === today);
-  let load = 0;
-  todaySessions.forEach(s => {
-    const complexity = s.complexity || 1;
-    load += complexity * s.duration;
-  });
-  let level, color;
-  if (load < 60)       { level = 'Low';      color = 'var(--accent-success)'; }
-  else if (load < 150) { level = 'Medium';   color = 'var(--accent-okay)'; }
-  else if (load < 300) { level = 'High';     color = 'var(--accent-warning)'; }
-  else                 { level = 'Overload'; color = 'var(--accent-danger)'; }
-  el.textContent = level;
-  el.style.color = color;
-}
-
-// --- Focus Improvement Suggestions (#30) ---
-
+/**
+ * Render personalised focus improvement suggestions.
+ * @description Analyses session patterns (time of day, distractions, duration, energy)
+ *              and shows one actionable suggestion per day.
+ * @returns {void}
+ */
 export function renderFocusSuggestion() {
   const el = document.getElementById('focus-suggestion');
   if (!el) return;
@@ -891,8 +553,11 @@ export function renderFocusSuggestion() {
   localStorage.setItem('pp_lastSuggestionDate', today);
 }
 
-// --- #47 Week Comparison ---
-
+/**
+ * Render the this-week vs last-week comparison chart.
+ * @description Shows side-by-side bars for each day comparing current and previous week.
+ * @returns {void}
+ */
 export function renderWeekComparison() {
   const el = document.getElementById('week-comparison');
   if (!el) return;
@@ -942,7 +607,7 @@ export function renderWeekComparison() {
     </div>`;
 }
 
-// --- #51 Data Visualization Themes ---
+// --- Private: Visualization theme definitions ---
 
 const VIZ_THEMES = {
   default:  { name: 'Default',  colors: ['var(--accent-work)', 'var(--accent-break)', 'var(--accent-success)', 'var(--accent-warning)', 'var(--accent-danger)'] },
@@ -953,6 +618,11 @@ const VIZ_THEMES = {
   mono:     { name: 'Mono',     colors: ['#e5e7eb', '#9ca3af', '#6b7280', '#d1d5db', '#4b5563'] },
 };
 
+/**
+ * Render the data-visualization theme picker.
+ * @description Shows colour-swatch buttons for each viz theme and handles switching.
+ * @returns {void}
+ */
 export function renderVizThemePicker() {
   const el = document.getElementById('viz-theme-picker');
   if (!el) return;
@@ -981,8 +651,11 @@ export function renderVizThemePicker() {
   });
 }
 
-// --- #54 Cumulative Focus Time Graph ---
-
+/**
+ * Render the 12-week cumulative focus time graph (SVG).
+ * @description Plots cumulative focus hours over the last 12 weeks as an area chart.
+ * @returns {void}
+ */
 export function renderCumulativeFocusGraph() {
   const svg = document.getElementById('cumulative-focus-svg');
   if (!svg) return;
@@ -1034,8 +707,11 @@ export function renderCumulativeFocusGraph() {
     <text x="${toX(11) + 4}" y="${toY(cumulative[11]).toFixed(1)}" fill="var(--accent-work)" font-size="8" font-weight="700">${(runningTotal / 60).toFixed(1)}h</text>`;
 }
 
-// --- #55 Session Gap Analysis ---
-
+/**
+ * Render session gap analysis (time between consecutive same-day sessions).
+ * @description Computes gaps between sessions and shows distribution plus stats.
+ * @returns {void}
+ */
 export function renderSessionGapAnalysis() {
   const el = document.getElementById('session-gap-analysis');
   if (!el) return;
@@ -1103,8 +779,11 @@ export function renderSessionGapAnalysis() {
     ${procrastinationNote}`;
 }
 
-// --- #56 Goal vs Actual Comparison ---
-
+/**
+ * Render the goal vs actual sessions comparison chart.
+ * @description Compares daily session target against actual sessions over the last 7 days.
+ * @returns {void}
+ */
 export function renderGoalVsActual() {
   const el = document.getElementById('goal-vs-actual');
   if (!el) return;
@@ -1157,13 +836,18 @@ export function renderGoalVsActual() {
     </div>`;
 }
 
-// --- #58 Exportable Reports (Canvas-based image export) ---
-
+/**
+ * Set up the export-report button click handler.
+ * @description Attaches an event listener that generates and downloads a PNG focus report.
+ * @returns {void}
+ */
 export function setupExportReport() {
   const btn = document.getElementById('export-report-btn');
   if (!btn) return;
   btn.addEventListener('click', () => exportReportAsImage());
 }
+
+// --- Private: Canvas-based image export ---
 
 function exportReportAsImage() {
   const sessions = state.sessionHistory;
@@ -1295,126 +979,4 @@ function exportReportAsImage() {
   link.download = `focus-report-${today.toISOString().split('T')[0]}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
-}
-
-// --- Session Chain Render (#11) ---
-
-export function renderSessionChain() {
-  const list = dom.chainList;
-  if (!list) return;
-  if (state.sessionChain.length === 0) {
-    list.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);padding:8px 0;">No entries in chain.</div>';
-    return;
-  }
-  list.innerHTML = state.sessionChain.map((entry, i) => {
-    const activeClass = i === state.chainIndex ? ' chain-active' : '';
-    const doneClass = entry.done ? ' chain-done' : '';
-    return `<div class="chain-entry${activeClass}${doneClass}" data-chain-idx="${i}">
-      <span class="chain-idx">${i + 1}</span>
-      <span class="chain-entry-dur">${entry.duration}m</span>
-      <span class="chain-entry-task">${escapeHtml(entry.task || 'Untitled')}</span>
-      ${entry.done ? '<span style="color:var(--accent-success);">✓</span>' : ''}
-      <button class="btn-delete-chain" data-chain-idx="${i}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;padding:2px 4px;">✕</button>
-    </div>`;
-  }).join('');
-}
-
-// --- Recurring Tasks Render (#33) ---
-
-export function renderRecurringTasks() {
-  const list = dom.recurringTaskList;
-  if (!list) return;
-  if (state.recurringTasks.length === 0) {
-    list.innerHTML = '';
-    return;
-  }
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  list.innerHTML = state.recurringTasks.map(rt => {
-    const days = rt.days.map(d => dayNames[d]).join(', ');
-    return `<div class="recurring-item" data-recurring-id="${rt.id}">
-      <div class="recurring-item-name">${escapeHtml(rt.name)}</div>
-      <div class="recurring-item-days">${days}</div>
-      <button class="btn-delete-recurring" data-recurring-id="${rt.id}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;padding:2px 4px;">✕</button>
-    </div>`;
-  }).join('');
-}
-
-// --- Task Templates Render (#39) ---
-
-export function renderTaskTemplates() {
-  const list = dom.templateList;
-  if (!list) return;
-  if (state.taskTemplates.length === 0) {
-    list.innerHTML = '<div class="tasks-empty">No templates saved yet.</div>';
-    return;
-  }
-  list.innerHTML = state.taskTemplates.map(t => `
-    <div class="template-item" data-template-id="${t.id}">
-      <div class="template-item-info">
-        <div class="template-item-name">${escapeHtml(t.name)}</div>
-        <div class="template-item-meta">${t.category ? t.category : ''} ${t.complexity ? '★'.repeat(t.complexity) : ''} ${t.estimate ? t.estimate + ' poms' : ''}</div>
-      </div>
-      <button class="btn-load-template" data-template-id="${t.id}" title="Load template">▶ Use</button>
-      <button class="btn-delete-template" data-template-id="${t.id}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;padding:2px 4px;">✕</button>
-    </div>`).join('');
-}
-
-// --- Spawn recurring tasks for today (#33) ---
-
-export function spawnRecurringTasks() {
-  const today = new Date().getDay();
-  const todayDateStr = new Date().toDateString();
-  state.recurringTasks.forEach(rt => {
-    if (!rt.days.includes(today)) return;
-    // Check if already spawned today
-    const alreadyExists = state.taskQueue.some(t => t.recurringSourceId === rt.id && t.spawnDate === todayDateStr);
-    if (alreadyExists) return;
-    const task = {
-      id: state.nextTaskId++,
-      name: rt.name,
-      priority: 'medium',
-      done: false,
-      archived: false,
-      estimate: 0,
-      pomodorosCompleted: 0,
-      subtasks: [],
-      recurringSourceId: rt.id,
-      spawnDate: todayDateStr,
-    };
-    state.taskQueue.push(task);
-  });
-  saveTaskQueue();
-}
-
-// --- #81 Leaderboard ---
-
-export function renderLeaderboard() {
-  const el = dom.leaderboardGrid;
-  if (!el) return;
-  if (state.profiles.length <= 1) {
-    el.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Create more profiles in Settings to see the leaderboard.</p>';
-    return;
-  }
-  const stats = state.profiles.map(name => getProfileStats(name));
-  stats.sort((a, b) => b.totalMins - a.totalMins);
-  const medals = ['🥇', '🥈', '🥉'];
-  el.innerHTML = stats.map((p, i) => {
-    const hrs = (p.totalMins / 60).toFixed(1);
-    const isCurrent = p.name === state.currentProfile;
-    return `<div class="leaderboard-row${isCurrent ? ' current' : ''}">
-      <span class="lb-rank">${medals[i] || `#${i + 1}`}</span>
-      <span class="lb-name">${escapeHtml(p.name)}</span>
-      <span class="lb-stat">${hrs}h · Lv.${p.level} · ${p.sessions} sessions</span>
-    </div>`;
-  }).join('');
-}
-
-// --- Profile select population ---
-
-export function populateProfileSelect() {
-  const sel = dom.profileSelect;
-  if (!sel) return;
-  sel.innerHTML = state.profiles.map(p =>
-    `<option value="${escapeHtml(p)}"${p === state.currentProfile ? ' selected' : ''}>${escapeHtml(p)}</option>`
-  ).join('');
 }

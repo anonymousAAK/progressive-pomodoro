@@ -1,10 +1,26 @@
+/**
+ * Appearance & Theme Engine
+ *
+ * Manages all visual customization: dark/light/system themes, accent
+ * colors, font sizes, background styles (#63), timer fonts (#64),
+ * notification sounds (#66), UI density (#68), custom focus labels (#69),
+ * celebration styles (#70), timer scale (#71), and seasonal themes (#72).
+ *
+ * Each apply* function updates state, applies to DOM, syncs UI controls,
+ * and persists to localStorage.
+ *
+ * @module js/theme
+ */
+
 import { state } from './state.js';
 import { dom } from './dom.js';
 
 const html = document.documentElement;
 
-// --- Theme (dark / light / system) ---
-
+/**
+ * Apply a theme (dark/light/system) with smooth transition.
+ * @param {'dark'|'light'|'system'} theme
+ */
 export function applyTheme(theme) {
   state.currentTheme = theme;
 

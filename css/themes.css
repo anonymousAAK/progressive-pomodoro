@@ -1,3 +1,14 @@
+/**
+ * Themes
+ *
+ * Light theme variable overrides, accent colour options (purple, blue, teal,
+ * green, rose, orange), custom background gradient styles, light mode
+ * background overrides, and seasonal theme variations (spring, summer,
+ * autumn, winter).
+ *
+ * @module css/themes.css
+ */
+
 /* ===== Light mode ===== */
 html.light {
   --bg-primary:   #f0f0f7;

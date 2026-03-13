@@ -1,8 +1,23 @@
-// Cached DOM element references — queried once at startup
+/**
+ * DOM Element Cache
+ *
+ * Queries and caches all DOM element references at module load time.
+ * Other modules import `dom` and access elements directly without
+ * repeated querySelector calls. Elements are grouped by feature area.
+ *
+ * @module js/dom
+ */
 
+/** @param {string} id @returns {HTMLElement|null} */
 const $ = id => document.getElementById(id);
+
+/** @param {string} sel @returns {NodeListOf<Element>} */
 const $$ = sel => document.querySelectorAll(sel);
 
+/**
+ * Cached DOM element references, organized by feature area.
+ * @type {Object<string, HTMLElement|NodeListOf<Element>|null>}
+ */
 export const dom = {
   // Timer
   timerDisplay:       $('timer-display'),

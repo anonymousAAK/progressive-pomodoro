@@ -1,9 +1,24 @@
+/**
+ * Gamification — Streaks & Achievements
+ *
+ * Manages daily streak tracking with streak shields (awarded every 7 days,
+ * max 3), and checks/awards achievements after each completed session.
+ *
+ * @module js/gamification
+ */
+
 import { state, ACHIEVEMENTS } from './state.js';
 import { saveAchievements } from './storage.js';
-import { renderAchievements, showToast } from './render.js';
+import { renderAchievements, showToast } from './render/index.js';
 
-// --- Streak ---
+// ---------------------------------------------------------------------------
+// Streak tracking
+// ---------------------------------------------------------------------------
 
+/**
+ * Update the daily streak. Uses streak shields to bridge a single missed day.
+ * Awards a new shield every 7 consecutive days (max 3).
+ */
 export function updateStreak() {
   const today = new Date().toDateString();
   if (state.streakData.lastDate === today) return;
@@ -38,8 +53,14 @@ export function updateStreak() {
   }
 }
 
-// --- Achievements ---
+// ---------------------------------------------------------------------------
+// Achievement checking
+// ---------------------------------------------------------------------------
 
+/**
+ * Check all achievement conditions and unlock any newly earned ones.
+ * Shows toast notifications for each new unlock.
+ */
 export function checkAchievements() {
   const newlyUnlocked = [];
 

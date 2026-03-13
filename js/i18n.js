@@ -1,7 +1,19 @@
-// Internationalization module
-// Feature #104: Multi-language support
+/**
+ * Internationalization (i18n)
+ *
+ * Multi-language support (#104) with RTL detection (#105).
+ * Currently supports English and Spanish. Uses a simple key-value
+ * lookup with fallback to English for missing translations.
+ *
+ * @module js/i18n
+ */
 
+/**
+ * i18n singleton with translation strings and language management.
+ * @type {{currentLang: string, strings: Object, t: Function, setLang: Function, loadLang: Function}}
+ */
 export const i18n = {
+  /** @type {string} Current language code */
   currentLang: 'en',
 
   strings: {

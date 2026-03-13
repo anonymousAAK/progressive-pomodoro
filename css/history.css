@@ -1,3 +1,12 @@
+/**
+ * History
+ *
+ * History page header and actions, weekly bar chart, scrollable session
+ * list with focus-rating badges, and empty state.
+ *
+ * @module css/history.css
+ */
+
 /* ===== History page header ===== */
 .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .history-header h2 { font-size: 1.3rem; font-weight: 700; }

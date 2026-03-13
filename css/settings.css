@@ -1,3 +1,16 @@
+/**
+ * Settings
+ *
+ * Settings page sections, setting rows and inputs, theme/font/accent/ambient
+ * option buttons, color swatches, task management (estimates, drag-and-drop,
+ * subtasks, recurring tasks, templates), session target, focus score, energy
+ * row, break activity, quick switch, affirmation overlay, focus mode,
+ * background/timer-font/notification/density/celebration options, and
+ * UI density overrides.
+ *
+ * @module css/settings.css
+ */
+
 /* ===== Settings page ===== */
 .settings-section { margin-bottom: 12px; }
 .settings-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 16px; }

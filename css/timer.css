@@ -1,3 +1,15 @@
+/**
+ * Timer
+ *
+ * Timer page layout, preset buttons, task input, category chips, circular
+ * timer ring and display, session dots, timer controls, skip/distraction
+ * buttons, focus rating, post-session notes, tips, daily challenge,
+ * mood row, complexity row, lockout badge, pause counter, warm-up/overtime
+ * rings, gradual acceleration, reflection prompt, and session chains.
+ *
+ * @module css/timer.css
+ */
+
 /* ===== Timer page layout ===== */
 .timer-container { display: flex; flex-direction: column; align-items: center; padding: 10px 0; }
 

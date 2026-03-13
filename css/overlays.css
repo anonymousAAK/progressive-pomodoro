@@ -1,0 +1,148 @@
+/**
+ * Overlays
+ *
+ * Tooltip tour, onboarding tutorial, widget mode (floating timer),
+ * affirmation overlay, and focus mode visibility toggles.
+ * Features: #102, #103, #119
+ *
+ * @module css/overlays.css
+ */
+
+/* ===== #102 Tooltip Tour ===== */
+.tooltip-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 300; display: flex; align-items: center; justify-content: center;
+}
+.tooltip-card {
+  background: var(--bg-secondary, #12121a);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  max-width: 380px; text-align: center;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-lg);
+  animation: tooltipIn 0.3s var(--ease-spring);
+}
+@keyframes tooltipIn {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.tooltip-text { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
+.tooltip-actions { display: flex; gap: 10px; justify-content: center; }
+.btn-tooltip-skip {
+  padding: 8px 16px; background: transparent; border: 1px solid var(--border);
+  color: var(--text-muted); font-family: inherit; font-size: 0.78rem; border-radius: 50px; cursor: pointer;
+}
+.btn-tooltip-next {
+  padding: 8px 20px; background: var(--accent-work); border: none;
+  color: white; font-family: inherit; font-size: 0.78rem; font-weight: 600; border-radius: 50px; cursor: pointer;
+  box-shadow: 0 4px 16px var(--accent-work-glow);
+  transition: all 0.2s var(--ease-smooth);
+}
+.btn-tooltip-next:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-work-glow); }
+.tooltip-step { font-size: 0.68rem; color: var(--text-muted); margin-top: 10px; }
+
+/* ===== #103 Onboarding Tutorial ===== */
+.onboarding-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82);
+  z-index: 310; display: flex; align-items: center; justify-content: center;
+}
+.onboarding-card {
+  background: var(--bg-secondary, #12121a);
+  border: 2px solid var(--accent-work);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  max-width: 380px; text-align: center;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 40px rgba(99,102,241,0.2);
+  animation: tooltipIn 0.35s var(--ease-spring);
+}
+.onboarding-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.onboarding-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+.onboarding-text { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+.onboarding-actions { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+.btn-onboarding-skip {
+  padding: 10px 20px; background: transparent; border: 1px solid var(--border);
+  color: var(--text-muted); font-family: inherit; font-size: 0.82rem; border-radius: 50px; cursor: pointer;
+}
+.btn-onboarding-next {
+  padding: 10px 24px; background: var(--accent-work); border: none;
+  color: white; font-family: inherit; font-size: 0.82rem; font-weight: 600; border-radius: 50px; cursor: pointer;
+  box-shadow: 0 4px 20px var(--accent-work-glow);
+}
+.onboarding-dots { display: flex; gap: 6px; justify-content: center; }
+.ob-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: all 0.3s var(--ease-spring); }
+.ob-dot.active { background: var(--accent-work); transform: scale(1.2); box-shadow: 0 0 8px var(--accent-work-glow); }
+
+/* ===== #119 Widget Mode ===== */
+.focus-widget {
+  position: fixed; bottom: 30px; right: 30px;
+  width: 100px; height: 100px;
+  background: rgba(10,10,15,0.92);
+  border: 2px solid var(--accent-work);
+  border-radius: 50%;
+  z-index: 500; cursor: grab;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 20px var(--accent-work-glow);
+  user-select: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: box-shadow 0.3s var(--ease-smooth);
+}
+.focus-widget:hover { box-shadow: 0 6px 32px rgba(0,0,0,0.6), 0 0 28px var(--accent-work-glow); }
+.focus-widget:active { cursor: grabbing; }
+.widget-ring {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  transform: rotate(-90deg);
+}
+.widget-ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 4; }
+.widget-ring-progress {
+  fill: none; stroke: var(--accent-work); stroke-width: 4; stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease;
+}
+.widget-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem; font-weight: 700; color: var(--text-primary);
+  z-index: 1; pointer-events: none;
+}
+.widget-close {
+  position: absolute; top: -4px; right: -4px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent-danger); border: none; color: white;
+  font-size: 0.8rem; cursor: pointer; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s var(--ease-smooth);
+  box-shadow: 0 2px 8px rgba(239,68,68,0.3);
+}
+.widget-close:hover { transform: scale(1.15); box-shadow: 0 3px 12px rgba(239,68,68,0.4); }
+
+/* ===== Affirmation overlay ===== */
+.affirmation-overlay {
+  position: fixed; top: 0; left: 0; right: 0;
+  background: rgba(99,102,241,0.12); backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text-primary); text-align: center;
+  padding: 18px 24px; font-size: 1rem; font-weight: 500; font-style: italic;
+  z-index: 150; opacity: 0; transform: translateY(-100%);
+  transition: all 0.5s var(--ease-spring); pointer-events: none;
+  box-shadow: 0 4px 20px rgba(99,102,241,0.15);
+  letter-spacing: 0.01em;
+}
+.affirmation-overlay.show { opacity: 1; transform: translateY(0); }
+
+/* ===== Focus mode ===== */
+#app.focus-mode .stats-bar,
+#app.focus-mode .nav,
+#app.focus-mode .app-header .subtitle,
+#app.focus-mode .presets-row,
+#app.focus-mode .category-row,
+#app.focus-mode .energy-row,
+#app.focus-mode .intention-wrapper,
+#app.focus-mode .challenge-card,
+#app.focus-mode .shortcuts-hint,
+#app.focus-mode .session-target-row,
+#app.focus-mode .focus-score-banner { display: none !important; }

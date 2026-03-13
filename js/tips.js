@@ -1,5 +1,15 @@
+/**
+ * Focus Tips
+ *
+ * Provides randomized productivity and focus tips displayed during breaks.
+ * Tips are curated, evidence-based suggestions for improving focus habits.
+ *
+ * @module js/tips
+ */
+
 import { dom } from './dom.js';
 
+/** @constant {string[]} Curated focus and productivity tips */
 const TIPS = [
   'Close all unnecessary browser tabs. Each open tab is a potential distraction pulling at your attention.',
   "Try the 'one thing' rule: before starting, write down the single most important task to accomplish.",
@@ -23,6 +33,10 @@ const TIPS = [
   'Visualize completing the task before you start. Mental rehearsal primes your brain for action.',
 ];
 
+/**
+ * Display a random focus tip with a brief loading animation.
+ * Updates the tip display element and re-enables the button.
+ */
 export function getFocusTip() {
   if (!dom.getTipBtn || !dom.tipDisplay) return;
 

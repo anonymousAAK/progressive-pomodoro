@@ -1,3 +1,13 @@
+/**
+ * Components
+ *
+ * Reusable UI components: buttons (primary, secondary, danger, export, save),
+ * toggle switches, toast notifications, celebration/confetti animation,
+ * loading spinner, and keyboard shortcut hints.
+ *
+ * @module css/components.css
+ */
+
 /* ===== Buttons ===== */
 .btn {
   border: none; font-family: inherit; font-weight: 600; cursor: pointer;

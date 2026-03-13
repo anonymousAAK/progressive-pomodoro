@@ -1,3 +1,14 @@
+/**
+ * Stats
+ *
+ * Stats page summary grid, focus distribution bar, calendar heatmap,
+ * personal records, achievements/badges, hourly chart, duration distribution,
+ * task history bars, cognitive load chip, week comparison, visualization
+ * theme picker, export report button, badge share button, and leaderboard.
+ *
+ * @module css/stats.css
+ */
+
 /* ===== Stats grid (4 summary cards) ===== */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .stats-card {

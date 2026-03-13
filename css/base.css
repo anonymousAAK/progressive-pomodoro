@@ -1,3 +1,13 @@
+/**
+ * Base
+ *
+ * Design system tokens (colors, spacing, typography, shadows, easing, glass),
+ * CSS reset, custom scrollbar, animated background orbs, app shell layout,
+ * header, top stats bar, navigation, pages, cards, and responsive breakpoints.
+ *
+ * @module css/base.css
+ */
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }

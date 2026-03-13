@@ -1,15 +1,34 @@
+/**
+ * Audio Engine
+ *
+ * Generates all sounds using the Web Audio API — no external audio files.
+ * Provides one-shot sound effects (click, work-end, break-end, halftime),
+ * custom notification sounds (#66: bell, chime, ding, gong, marimba),
+ * and ambient sound loops (white noise, rain, lo-fi chords).
+ *
+ * @module js/audio
+ */
+
 import { state } from './state.js';
 
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
+/** @type {AudioContext|null} Lazy-initialized audio context */
 let audioCtx = null;
 
+/** Ensure AudioContext is created and resumed (required after user gesture). */
 export function ensureAudioCtx() {
   if (!audioCtx) audioCtx = new AudioCtx();
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-// --- One-shot sound effects ---
+// ---------------------------------------------------------------------------
+// One-shot sound effects
+// ---------------------------------------------------------------------------
 
+/**
+ * Play a synthesized sound effect.
+ * @param {'work-end'|'break-end'|'halftime'|'click'} type - Sound type
+ */
 export function playSound(type) {
   if (!state.soundEnabled) return;
   ensureAudioCtx();
@@ -65,8 +84,14 @@ export function playSound(type) {
   }
 }
 
-// --- Notification sound preview (#66) ---
+// ---------------------------------------------------------------------------
+// Custom notification sounds (#66)
+// ---------------------------------------------------------------------------
 
+/**
+ * Preview/play a custom notification sound.
+ * @param {'bell'|'chime'|'ding'|'gong'|'marimba'|'default'} type
+ */
 export function previewNotificationSound(type) {
   ensureAudioCtx();
   const now = audioCtx.currentTime;
@@ -141,8 +166,10 @@ export function previewNotificationSound(type) {
   }
 }
 
-// --- Play custom notification sound (used by timer completion) ---
-
+/**
+ * Play the user's selected notification sound (used by timer completion).
+ * Falls back to the default work-end sound.
+ */
 export function playNotificationSound() {
   if (!state.soundEnabled) return;
   const type = state.notificationSound || 'default';
@@ -153,8 +180,14 @@ export function playNotificationSound() {
   }
 }
 
-// --- Ambient sound engine ---
+// ---------------------------------------------------------------------------
+// Ambient sound engine
+// ---------------------------------------------------------------------------
 
+/**
+ * Start an ambient sound loop.
+ * @param {'none'|'whitenoise'|'rain'|'lofi'} type - Ambient sound type
+ */
 export function startAmbient(type) {
   stopAmbient();
   state.currentAmbient = type;
@@ -196,6 +229,7 @@ export function startAmbient(type) {
   }
 }
 
+/** Stop the currently playing ambient sound and clean up resources. */
 export function stopAmbient() {
   if (state.ambientSource) {
     try { state.ambientSource.stop(); } catch (_) {}
