@@ -258,6 +258,7 @@ export function renderAchievements() {
       <div class="badge-info">
         <div class="badge-name">${a.name}</div>
         <div class="badge-desc">${a.desc}</div>
+        ${unlocked ? `<button class="badge-share-btn" data-ach-id="${a.id}" aria-label="Share ${a.name} achievement">Share</button>` : ''}
       </div>
     </div>`;
   }).join('');

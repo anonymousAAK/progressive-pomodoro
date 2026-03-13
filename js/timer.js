@@ -2,6 +2,7 @@ import { state, POMODOROS_BEFORE_LONG_BREAK, BREAK_ACTIVITIES } from './state.js
 import { dom } from './dom.js';
 import { playSound } from './audio.js';
 import { updateTimerDisplay, updateNextInfo, renderSessionDots, showCelebration, showToast, showAffirmation } from './render.js';
+import { sendEnhancedNotification, hapticFeedback, announceToScreenReader } from './features-batch5.js';
 
 // Injected from rating.js to avoid circular deps
 let _onWorkComplete = null;
@@ -396,7 +397,9 @@ function _onTimerComplete() {
 
   if (state.currentMode === 'work') {
     playSound('work-end');
-    sendNotification('Work session complete!', 'Time to rate your focus.', [{ label: 'Start Break', action: 'break' }]);
+    hapticFeedback('timer-end');
+    // #118 Enhanced notifications with actions
+    sendEnhancedNotification('work-end');
     dom.timerControls.classList.add('hidden');
     if (dom.distractionWrapper) dom.distractionWrapper.classList.add('hidden');
     dom.focusRating.classList.remove('hidden');
@@ -405,10 +408,15 @@ function _onTimerComplete() {
     // Smart break suggestion (#14)
     checkSmartBreakSuggestion();
 
+    announceToScreenReader('Work session complete. Please rate your focus.');
     if (_onWorkComplete) _onWorkComplete();
   } else {
     playSound('break-end');
+    hapticFeedback('timer-end');
+    // #118 Enhanced notifications with actions
+    sendEnhancedNotification('break-end');
     sendNotification('Break is over!', 'Ready for another work session?');
+    announceToScreenReader('Break is over. Ready for work.');
 
     // Session chaining (#11) - advance to next chain entry
     if (state.sessionChain.length > 0 && state.chainIndex >= 0 && state.chainIndex < state.sessionChain.length - 1) {

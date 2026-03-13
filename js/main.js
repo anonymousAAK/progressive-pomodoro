@@ -25,6 +25,18 @@ import {
 } from './render.js';
 import { registerAllEvents } from './events.js';
 import { setRatingBC } from './rating.js';
+import {
+  initBatch5Features,
+  renderWeeklyMissions,
+  renderFocusGarden,
+  renderMultiplierBadge,
+  renderUnlockableThemes,
+  renderCoinBalance,
+  renderProgressTimeline,
+  updateWidget,
+  setTimerFunctions,
+} from './features-batch5.js';
+import { startTimer, pauseTimer, switchMode } from './timer.js';
 
 // --- BroadcastChannel for multi-tab sync ---
 const bc = new BroadcastChannel('pp_sync');
@@ -87,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 5. Register all DOM event listeners
   registerAllEvents();
 
+  // 5b. Provide timer functions to voice control (#100)
+  setTimerFunctions({ startTimer, pauseTimer, resetTimer, switchMode });
+
   // 6. Initial render
   resetTimer();
   updateTopStats();
@@ -103,6 +118,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // 7. Spawn recurring tasks for today (#33)
   spawnRecurringTasks();
 
+  // 7b. Batch 5 features init
+  initBatch5Features();
+  renderCoinBalance();
+  renderMultiplierBadge();
+  renderUnlockableThemes();
+
   // 8. Resume ambient sound if user had one active
   if (state.currentAmbient !== 'none') startAmbient(state.currentAmbient);
 
@@ -115,4 +136,36 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
+
+  // 10. Sync batch 5 settings UI
+  const highContrastToggle = document.getElementById('high-contrast-toggle');
+  if (highContrastToggle) highContrastToggle.checked = localStorage.getItem('pp_highContrast') === 'true';
+
+  const hapticToggle = document.getElementById('haptic-toggle');
+  if (hapticToggle) hapticToggle.checked = localStorage.getItem('pp_haptic') === 'true';
+
+  const voiceToggle = document.getElementById('voice-control-toggle');
+  if (voiceToggle) voiceToggle.checked = localStorage.getItem('pp_voiceControl') === 'true';
+
+  const perfToggle = document.getElementById('performance-mode-toggle');
+  if (perfToggle) perfToggle.checked = localStorage.getItem('pp_performanceMode') === 'true';
+
+  const webhookInput = document.getElementById('webhook-url-input');
+  if (webhookInput) webhookInput.value = localStorage.getItem('pp_webhookUrl') || '';
+
+  const webhookEnabled = document.getElementById('webhook-enabled-toggle');
+  if (webhookEnabled) webhookEnabled.checked = localStorage.getItem('pp_webhookEnabled') === 'true';
+
+  const langSelect = document.getElementById('language-select');
+  if (langSelect) langSelect.value = localStorage.getItem('pp_lang') || 'en';
+
+  const cbPalette = localStorage.getItem('pp_colorblind') || 'none';
+  document.querySelectorAll('.cb-opt').forEach(b => {
+    b.classList.toggle('active', b.dataset.cb === cbPalette);
+  });
+
+  // 11. Widget update loop
+  setInterval(() => {
+    updateWidget();
+  }, 1000);
 });
