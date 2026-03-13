@@ -13,7 +13,10 @@ export function applyTheme(theme) {
     useDark = !window.matchMedia('(prefers-color-scheme: light)').matches;
   }
 
+  // Smooth theme transition
+  document.body.classList.add('theme-transitioning');
   html.classList.toggle('light', !useDark);
+  setTimeout(() => document.body.classList.remove('theme-transitioning'), 350);
 
   // Sync theme-option buttons in settings
   dom.themeOpts.forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
