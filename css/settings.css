@@ -3,8 +3,9 @@
 .settings-section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 16px; }
 
 .setting-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 0; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .setting-row:last-child { border-bottom: none; }
 .setting-label { font-size: 0.85rem; font-weight: 500; }
@@ -14,9 +15,14 @@
   width: 72px; padding: 8px 10px; background: var(--bg-secondary);
   border: 1px solid var(--border); border-radius: var(--radius-xs);
   color: var(--text-primary); font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem; text-align: center; outline: none; transition: var(--transition);
+  font-size: 0.85rem; text-align: center; outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.setting-input:focus { border-color: var(--accent-work); box-shadow: 0 0 0 3px var(--accent-work-glow); }
+.setting-input:focus {
+  border-color: var(--accent-work);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  outline: none;
+}
 
 /* ===== Theme option buttons ===== */
 .theme-toggle-group, .font-size-group {
@@ -27,7 +33,7 @@
   color: var(--text-secondary); font-family: inherit; font-size: 0.75rem; font-weight: 600;
   border-radius: var(--radius-xs); cursor: pointer; transition: var(--transition);
 }
-.theme-opt:hover, .font-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.theme-opt:hover, .font-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); transform: scale(1.02); }
 .theme-opt.active, .font-opt.active {
   background: rgba(99,102,241,0.15); border-color: var(--accent-work); color: var(--accent-work);
 }
@@ -38,8 +44,14 @@
   width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
   border: 2px solid transparent; transition: var(--transition);
 }
-.color-swatch:hover { transform: scale(1.15); }
-.color-swatch.active { border-color: var(--text-primary); box-shadow: 0 0 0 2px var(--bg-primary); transform: scale(1.1); }
+.color-swatch:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(0,0,0,0.3);
+}
+.color-swatch.active {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px currentColor;
+}
 
 /* ===== Ambient sound selector ===== */
 .ambient-options { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -48,7 +60,7 @@
   color: var(--text-secondary); font-family: inherit; font-size: 0.78rem; font-weight: 600;
   border-radius: 50px; cursor: pointer; transition: var(--transition);
 }
-.ambient-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.ambient-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); transform: scale(1.02); }
 .ambient-btn.active {
   background: rgba(99,102,241,0.15); border-color: var(--accent-work); color: var(--accent-work);
 }
@@ -257,7 +269,7 @@
   color: var(--text-secondary); font-family: inherit; font-size: 0.68rem; font-weight: 600;
   border-radius: var(--radius-xs); cursor: pointer; transition: var(--transition);
 }
-.bg-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.bg-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); transform: scale(1.02); }
 .bg-opt.active { background: rgba(99,102,241,0.15); border-color: var(--accent-work); color: var(--accent-work); }
 
 /* Timer font options (#64) */
@@ -267,7 +279,7 @@
   color: var(--text-secondary); font-family: inherit; font-size: 0.75rem; font-weight: 600;
   border-radius: var(--radius-xs); cursor: pointer; transition: var(--transition);
 }
-.timer-font-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.timer-font-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); transform: scale(1.02); }
 .timer-font-opt.active { background: rgba(99,102,241,0.15); border-color: var(--accent-work); color: var(--accent-work); }
 
 /* Notification sound options (#66) */
@@ -277,7 +289,7 @@
   color: var(--text-secondary); font-family: inherit; font-size: 0.68rem; font-weight: 600;
   border-radius: var(--radius-xs); cursor: pointer; transition: var(--transition);
 }
-.notif-sound-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.notif-sound-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); transform: scale(1.02); }
 .notif-sound-opt.active { background: rgba(99,102,241,0.15); border-color: var(--accent-work); color: var(--accent-work); }
 
 /* UI Density options (#68) */
@@ -287,7 +299,7 @@
   color: var(--text-secondary); font-family: inherit; font-size: 0.75rem; font-weight: 600;
   border-radius: var(--radius-xs); cursor: pointer; transition: var(--transition);
 }
-.density-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.density-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); transform: scale(1.02); }
 .density-opt.active { background: rgba(99,102,241,0.15); border-color: var(--accent-work); color: var(--accent-work); }
 
 /* Celebration style options (#70) */
@@ -297,7 +309,7 @@
   color: var(--text-secondary); font-family: inherit; font-size: 0.68rem; font-weight: 600;
   border-radius: var(--radius-xs); cursor: pointer; transition: var(--transition);
 }
-.celebration-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.celebration-opt:hover { background: var(--bg-card-hover); color: var(--text-primary); transform: scale(1.02); }
 .celebration-opt.active { background: rgba(99,102,241,0.15); border-color: var(--accent-work); color: var(--accent-work); }
 
 /* Timer scale slider (#71) */
