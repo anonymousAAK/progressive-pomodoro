@@ -70,10 +70,9 @@ This project is a **static web app** built with HTML, CSS, and modern ES modules
 
 ### Run locally
 
-Use any simple static server from the repository root:
+From the repository root, start any simple static server:
 
 ```bash
-cd /home/runner/work/progressive-pomodoro/progressive-pomodoro
 python3 -m http.server 8000
 ```
 
@@ -155,11 +154,11 @@ A large backlog of product ideas lives in [`FEATURES.md`](./FEATURES.md), coveri
 If you want to improve the app, good contribution areas include:
 
 - UI polish and responsiveness
-- performance improvements
-- accessibility refinements
-- new focus workflows
-- better analytics and exports
-- additional integrations and languages
+- Performance improvements
+- Accessibility refinements
+- New focus workflows
+- Better analytics and exports
+- Additional integrations and languages
 
 ---
 
