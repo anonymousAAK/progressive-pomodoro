@@ -198,7 +198,7 @@ Ten built-in achievements that unlock based on your real history:
 | Tooltip help system | Contextual tooltips on first use explaining each feature |
 | Onboarding tutorial | Step-by-step guided tour for new users |
 | Multi-language support | English (en) and Spanish (es) with full UI string coverage |
-| RTL layout | Correct right-to-left layout when an RTL language is selected (Arabic, Hebrew, Farsi, Urdu) |
+| RTL layout | Correct right-to-left layout when an RTL language is selected (Arabic, Hebrew, Persian, Urdu) |
 
 ### Customization & appearance
 
