@@ -9,47 +9,75 @@
  * @module css/themes.css
  */
 
-/* ===== Light mode ===== */
+/* ===== Light mode — bone / archival cream ===== */
 html.light {
-  --bg-primary:   #f0f0f7;
-  --bg-secondary: #e4e4f0;
-  --bg-card:      rgba(0, 0, 0, 0.04);
-  --bg-card-hover:rgba(0, 0, 0, 0.07);
-  --border:       rgba(0, 0, 0, 0.09);
-  --border-hover: rgba(0, 0, 0, 0.18);
-  --text-primary:   #1a1a2e;
-  --text-secondary: #44446a;
-  --text-muted:     #88889a;
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+  --bg-primary:    #f5f1e8;
+  --bg-secondary:  #ede7d8;
+  --bg-elevated:   #ffffff;
+  --bg-card:       #fbf7ec;
+  --bg-card-hover: #f3eedf;
+  --border:        rgba(40, 30, 18, 0.10);
+  --border-hover:  rgba(40, 30, 18, 0.22);
+  --rule:          rgba(40, 30, 18, 0.07);
+  --text-primary:   #1f1a12;
+  --text-secondary: #5a5246;
+  --text-muted:     #8a8170;
+  --text-faint:     #b5ad9c;
+  --accent-work:       #8a6d2e;
+  --accent-work-soft:  #a08344;
+  --accent-work-glow:  rgba(138, 109, 46, 0.18);
+  --shadow-xs: 0 1px 0 rgba(40,30,18,0.06);
+  --shadow-sm: 0 1px 2px rgba(40,30,18,0.08);
+  --shadow-md: 0 4px 14px -6px rgba(40,30,18,0.18);
+  --shadow-lg: 0 18px 36px -16px rgba(40,30,18,0.25);
 }
 html.light body { background: var(--bg-primary); }
-html.light .orb  { opacity: 0.06; }
-html.light .nav-btn.active { background: rgba(0,0,0,0.07); }
+html.light .bg-gradient {
+  background:
+    radial-gradient(60% 50% at 20% 10%, rgba(138,109,46,0.08) 0%, transparent 60%),
+    radial-gradient(50% 40% at 90% 85%, rgba(90,82,70,0.05) 0%, transparent 65%);
+}
+html.light .bg-gradient::after { mix-blend-mode: multiply; opacity: 0.35; }
+html.light .ring-bg { stroke: rgba(40,30,18,0.06); }
+html.light .btn-primary,
+html.light .btn-save {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+html.light .btn-primary:hover,
+html.light .btn-save:hover { background: var(--accent-work); color: #fff; }
+html.light .save-toast { background: var(--text-primary); color: var(--bg-primary); }
 
-/* ===== Accent colour overrides ===== */
+/* ===== Accent colour overrides — refined, desaturated ===== */
 html[data-accent="purple"] {
-  --accent-work:      #8b5cf6;
-  --accent-work-glow: rgba(139, 92, 246, 0.3);
+  --accent-work:      #a888c2;
+  --accent-work-soft: #957bb0;
+  --accent-work-glow: rgba(168, 136, 194, 0.18);
 }
 html[data-accent="blue"] {
-  --accent-work:      #3b82f6;
-  --accent-work-glow: rgba(59, 130, 246, 0.3);
+  --accent-work:      #7a9bbf;
+  --accent-work-soft: #6889ad;
+  --accent-work-glow: rgba(122, 155, 191, 0.18);
 }
 html[data-accent="teal"] {
-  --accent-work:      #14b8a6;
-  --accent-work-glow: rgba(20, 184, 166, 0.3);
+  --accent-work:      #7fb3a1;
+  --accent-work-soft: #6da08e;
+  --accent-work-glow: rgba(127, 179, 161, 0.18);
 }
 html[data-accent="green"] {
-  --accent-work:      #10b981;
-  --accent-work-glow: rgba(16, 185, 129, 0.3);
+  --accent-work:      #88a861;
+  --accent-work-soft: #779755;
+  --accent-work-glow: rgba(136, 168, 97, 0.18);
 }
 html[data-accent="rose"] {
-  --accent-work:      #f43f5e;
-  --accent-work-glow: rgba(244, 63, 94, 0.3);
+  --accent-work:      #c47a8a;
+  --accent-work-soft: #b06d7c;
+  --accent-work-glow: rgba(196, 122, 138, 0.18);
 }
 html[data-accent="orange"] {
-  --accent-work:      #f97316;
-  --accent-work-glow: rgba(249, 115, 22, 0.3);
+  --accent-work:      #c99464;
+  --accent-work-soft: #b58356;
+  --accent-work-glow: rgba(201, 148, 100, 0.18);
 }
 
 /* ===== Custom background styles (#63) ===== */
